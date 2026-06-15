@@ -21,6 +21,15 @@ export function LanguageToggle() {
       >
         FR
       </button>
+      <button
+        type="button"
+        className={locale === 'zh-HK' ? 'active' : ''}
+        onClick={() => setLocale('zh-HK')}
+        aria-pressed={locale === 'zh-HK'}
+        aria-label="Hong Kong Traditional Chinese"
+      >
+        繁中
+      </button>
     </div>
   );
 }
