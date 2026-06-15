@@ -27,6 +27,7 @@ export interface Translations {
   error: string;
   waiting: string;
   addMore: string;
+  uploadMore: string;
   thankYou: string;
   thankYouSubtitle: string;
 }
@@ -59,6 +60,7 @@ export const translations: Record<Locale, Translations> = {
     error: 'Error',
     waiting: 'Waiting',
     addMore: 'Add more',
+    uploadMore: 'Upload more',
     thankYou: 'Thank you!',
     thankYouSubtitle: 'Your memories have been shared with us.',
   },
@@ -90,6 +92,7 @@ export const translations: Record<Locale, Translations> = {
     error: 'Erreur',
     waiting: 'En attente',
     addMore: 'Ajouter',
+    uploadMore: 'Téléverser d\'autres fichiers',
     thankYou: 'Merci !',
     thankYouSubtitle: 'Vos souvenirs nous ont été partagés.',
   },
