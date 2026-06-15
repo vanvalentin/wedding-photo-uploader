@@ -2,14 +2,23 @@
   "name": "wedding-media-uploader",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "Premium mobile-first wedding guest photo & video uploader for Google Drive",
   "scripts": {
     "dev": "concurrently -n server,client -c blue,magenta \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
-    "build": "npm run build --prefix client && npm run build --prefix server",
+    "dev:vercel": "vercel dev",
+    "build": "npm run build --prefix client",
+    "build:all": "npm run build --prefix client && npm run build --prefix server",
     "start": "npm run start --prefix server",
     "install:all": "npm install --prefix server && npm install --prefix client"
   },
+  "dependencies": {
+    "google-auth-library": "^9.15.1",
+    "zod": "^3.24.2"
+  },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "@vercel/node": "^5.3.0",
+    "concurrently": "^9.1.2",
+    "vercel": "^42.1.0"
   }
 }
