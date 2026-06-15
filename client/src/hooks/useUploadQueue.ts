@@ -91,7 +91,7 @@ export function useUploadQueue() {
           updateFile(item.id, { progress });
         });
 
-        updateFile(item.id, { status: 'complete', progress: 100 });
+        updateFile(item.id, { status: 'complete', progress: 100, error: undefined });
       } catch (err) {
         allSucceeded = false;
         updateFile(item.id, {
@@ -128,7 +128,7 @@ export function useUploadQueue() {
           updateFile(id, { progress });
         });
 
-        updateFile(id, { status: 'complete', progress: 100 });
+        updateFile(id, { status: 'complete', progress: 100, error: undefined });
       } catch (err) {
         updateFile(id, {
           status: 'error',
