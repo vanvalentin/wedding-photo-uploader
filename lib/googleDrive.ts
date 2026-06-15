@@ -1,5 +1,5 @@
 import { JWT } from 'google-auth-library';
-import { config } from '../config.js';
+import { config } from './config.js';
 
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 

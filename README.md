@@ -19,10 +19,10 @@ Guests can optionally identify themselves, preview their media in a queue, and u
 ## Architecture
 
 ```
-┌─────────────┐     POST /api/upload/init      ┌─────────────┐
-│   Browser   │ ─────────────────────────────► │   Express   │
-│  (React)    │ ◄── session URI + metadata ─── │   Backend   │
-└──────┬──────┘                                └──────┬──────┘
+┌─────────────┐     POST /api/upload/init      ┌──────────────────┐
+│   Browser   │ ─────────────────────────────► │  API (Express or │
+│  (React)    │ ◄── session URI + metadata ─── │  Vercel serverless)│
+└──────┬──────┘                                └────────┬─────────┘
        │                                              │
        │  PUT chunks (resumable)                      │ Service Account
        ▼                                              ▼
@@ -44,11 +44,11 @@ Copy `.env.example` to `.env` in the project root (or set these in your hosting 
 |---|---|
 | `GOOGLE_DRIVE_FOLDER_ID` | ID of the Google Drive folder where uploads are stored. Found in the folder URL: `https://drive.google.com/drive/folders/<FOLDER_ID>` |
 | `GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL` | Service account email from Google Cloud Console |
-| `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | Service account private key (PEM format). Use `\n` for newlines when setting inline |
-| `PORT` | Server port (default: `3001`) |
+| `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | Service account private key (PEM format). Use `\n` for newlines in `.env`; on Vercel you can paste the full multiline key |
+| `PORT` | Server port for local Express only (default: `3001`) |
 | `NODE_ENV` | `development` or `production` |
-| `CORS_ORIGIN` | Allowed frontend origin(s), comma-separated (default: `http://localhost:5173`) |
-| `VITE_API_URL` | Backend URL for the Vite client (default: empty — uses Vite proxy in dev) |
+| `CORS_ORIGIN` | Allowed frontend origin(s) for local Express only (default: `http://localhost:5173`) |
+| `VITE_API_URL` | Backend URL for local Vite dev only (leave **empty** on Vercel — same-origin `/api`) |
 
 ## Google Cloud Setup
 
@@ -99,30 +99,102 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173).
 
-## Production Build
+### Local dev with Vercel runtime (optional)
+
+To test the same serverless API routes Vercel uses in production:
+
+```bash
+npm install
+cp .env.example .env.local   # Vercel CLI reads .env.local
+npm run dev:vercel
+```
+
+## Deploy to Vercel (recommended)
+
+The repo is configured for one-click Vercel deployment: the React app is served as static files and `/api/*` routes run as serverless functions.
+
+### 1. Push to GitHub
+
+Make sure your code is in a GitHub repository.
+
+### 2. Import the project in Vercel
+
+1. Go to [vercel.com/new](https://vercel.com/new)
+2. Import your GitHub repository
+3. **Framework Preset:** Other (leave as detected from `vercel.json`)
+4. **Root Directory:** `.` (repository root — do not set to `client`)
+5. Build settings are read from `vercel.json` automatically
+
+### 3. Add environment variables
+
+In **Project → Settings → Environment Variables**, add:
+
+| Variable | Value |
+|---|---|
+| `GOOGLE_DRIVE_FOLDER_ID` | Your Drive folder ID |
+| `GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL` | `client_email` from the JSON key |
+| `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | `private_key` from the JSON key (paste the full PEM, including `-----BEGIN PRIVATE KEY-----`) |
+
+> **Do not set `VITE_API_URL` on Vercel.** The frontend and API share the same domain, so requests go to `/api/upload/init` automatically.
+
+> **Private key tip:** In the Vercel dashboard, paste the entire private key with real line breaks. You do not need to escape `\n` like in a local `.env` file.
+
+Apply variables to **Production**, **Preview**, and **Development**.
+
+### 4. Deploy
+
+Click **Deploy**. Vercel will:
+
+1. Install root + client dependencies
+2. Build the Vite app to `client/dist`
+3. Deploy serverless functions from `api/`
+
+Your app will be live at `https://your-project.vercel.app`.
+
+### 5. Verify
+
+1. Open your Vercel URL
+2. Upload a small test photo
+3. Confirm it appears in your Google Drive folder
+
+Health check: `GET https://your-project.vercel.app/api/upload/health`
+
+### Vercel free tier notes
+
+- Serverless functions are included on the free Hobby plan (sufficient for a wedding weekend)
+- Only the small `/api/upload/init` call hits your server — large file bytes go directly to Google Drive
+- No database or persistent server required
+
+## Production Build (self-hosted alternative)
 
 ```bash
 npm run build
-NODE_ENV=production npm start
+npm start
 ```
 
-In production, the Express server serves the built React app from `client/dist` and handles API routes.
-
-Set `CORS_ORIGIN` to your production domain if frontend and backend are hosted separately.
+The Express server runs via `tsx` and serves the built React app from `client/dist` when `NODE_ENV=production`.
 
 ## Project Structure
 
 ```
+├── api/                    # Vercel serverless functions
+│   └── upload/
+│       ├── init.ts         # POST — start resumable upload session
+│       └── health.ts       # GET — health check
+├── lib/                    # Shared backend logic (Vercel + Express)
+│   ├── config.ts
+│   ├── googleDrive.ts
+│   └── uploadInit.ts
 ├── client/                 # Vite + React frontend
 │   └── src/
 │       ├── components/     # UI components
 │       ├── hooks/          # Upload queue & beforeunload guard
 │       ├── i18n/           # EN/FR translations
 │       └── services/       # Resumable upload client
-├── server/                 # Express backend
+├── server/                 # Express backend (local dev / self-hosted)
 │   └── src/
-│       ├── routes/         # API routes
-│       └── services/       # Google Drive integration
+│       └── routes/         # API routes
+├── vercel.json             # Vercel build & routing config
 ├── .env.example
 └── package.json
 ```
