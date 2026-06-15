@@ -7,7 +7,7 @@ Guests can optionally identify themselves, preview their media in a queue, and u
 ## Features
 
 - **Anonymous uploads** — no authentication for guests
-- **Google Drive destination** — all media lands in your folder via a service account
+- **Google Drive destination** — all media lands in your folder using your Google storage
 - **Resumable chunked uploads** — bypasses size limits; frontend chunks files and uploads directly to the session URI
 - **Bilingual UI** — English & French with a native EN / FR toggle
 - **Optional guest name** — appended to filenames and Drive metadata
@@ -24,7 +24,7 @@ Guests can optionally identify themselves, preview their media in a queue, and u
 │  (React)    │ ◄── session URI + metadata ─── │  Vercel serverless)│
 └──────┬──────┘                                └────────┬─────────┘
        │                                              │
-       │  PUT chunks (resumable)                      │ Service Account
+       │  PUT chunks (resumable)                      │ OAuth (your Drive)
        ▼                                              ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    Google Drive API                          │
@@ -38,19 +38,25 @@ Guests can optionally identify themselves, preview their media in a queue, and u
 
 ## Required Environment Variables
 
-Copy `.env.example` to `.env` in the project root (or set these in your hosting provider):
+Copy `.env.example` to `.env` in the project root (or set these in Vercel):
 
-| Variable | Description |
-|---|---|
-| `GOOGLE_DRIVE_FOLDER_ID` | ID of the Google Drive folder where uploads are stored. Found in the folder URL: `https://drive.google.com/drive/folders/<FOLDER_ID>` |
-| `GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL` | Service account email from Google Cloud Console |
-| `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | Service account private key (PEM format). Use `\n` for newlines in `.env`; on Vercel you can paste the full multiline key |
-| `PORT` | Server port for local Express only (default: `3001`) |
-| `NODE_ENV` | `development` or `production` |
-| `CORS_ORIGIN` | Allowed frontend origin(s) for local Express only (default: `http://localhost:5173`) |
-| `VITE_API_URL` | Backend URL for local Vite dev only (leave **empty** on Vercel — same-origin `/api`) |
+| Variable | Required | Description |
+|---|---|---|
+| `GOOGLE_DRIVE_FOLDER_ID` | Yes | Folder ID from `https://drive.google.com/drive/folders/<ID>` |
+| `GOOGLE_OAUTH_CLIENT_ID` | Yes* | OAuth client ID (Desktop app type) |
+| `GOOGLE_OAUTH_CLIENT_SECRET` | Yes* | OAuth client secret |
+| `GOOGLE_OAUTH_REFRESH_TOKEN` | Yes* | One-time refresh token for the account that **owns** the folder |
+| `GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL` | Shared Drive only | Service account email — **not for personal Gmail** |
+| `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | Shared Drive only | Service account PEM key |
+| `PORT` | No | Local Express port (default: `3001`) |
+| `CORS_ORIGIN` | No | Local dev CORS (default: `http://localhost:5173`) |
+| `VITE_API_URL` | No | Leave **empty** on Vercel |
 
-## Google Cloud Setup
+\* Use OAuth for **personal Google Drive** (Gmail). This is the recommended setup.
+
+> **Why not a service account?** Google service accounts have **zero storage quota** on personal Drive. Sharing a folder with a service account does not help — uploads fail with `403 storageQuotaExceeded`. Service accounts only work with [Google Workspace Shared Drives](https://developers.google.com/workspace/drive/api/guides/about-shareddrives).
+
+## Google Cloud Setup (OAuth — personal Drive)
 
 ### 1. Create a Google Cloud project
 
@@ -59,28 +65,56 @@ Copy `.env.example` to `.env` in the project root (or set these in your hosting 
 
 ### 2. Enable the Google Drive API
 
-1. Navigate to **APIs & Services → Library**.
-2. Search for **Google Drive API** and enable it.
+1. **APIs & Services → Library**
+2. Search **Google Drive API** → **Enable**
 
-### 3. Create a service account
+### 3. Configure OAuth consent screen
 
-1. Go to **APIs & Services → Credentials**.
-2. Click **Create Credentials → Service account**.
-3. Give it a name (e.g. `wedding-uploader`).
-4. Skip optional role grants → **Done**.
-5. Click the new service account → **Keys → Add Key → Create new key → JSON**.
-6. From the downloaded JSON, copy:
-   - `client_email` → `GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL`
-   - `private_key` → `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`
+1. **APIs & Services → OAuth consent screen**
+2. Choose **External** (or Internal if Workspace)
+3. Fill in app name & support email → **Save**
+4. On **Scopes**, add: `https://www.googleapis.com/auth/drive.file`
+5. On **Test users**, add your Google account (while app is in Testing mode)
 
-### 4. Share your Drive folder with the service account
+### 4. Create OAuth credentials
 
-1. Open your target Google Drive folder.
-2. Click **Share**.
-3. Add the service account email (`...@....iam.gserviceaccount.com`) as **Editor**.
-4. Copy the folder ID from the URL → `GOOGLE_DRIVE_FOLDER_ID`.
+1. **APIs & Services → Credentials → Create Credentials → OAuth client ID**
+2. Application type: **Desktop app**
+3. Copy **Client ID** → `GOOGLE_OAUTH_CLIENT_ID`
+4. Copy **Client secret** → `GOOGLE_OAUTH_CLIENT_SECRET`
 
-> **Important:** The service account must have Editor access to the folder, or uploads will fail with a 403 error.
+### 5. Get a refresh token (one-time)
+
+From the project root, with client ID/secret in `.env`:
+
+```bash
+npm install
+npm run get-refresh-token
+```
+
+1. Open the URL printed in the terminal
+2. Sign in with the Google account that **owns** your wedding Drive folder
+3. Approve access
+4. Copy the `code` from the redirect URL (localhost may show an error — that's OK)
+5. Paste the code → copy the `GOOGLE_OAUTH_REFRESH_TOKEN` output
+
+### 6. Set your folder ID
+
+1. Create a folder in Google Drive for wedding uploads
+2. Copy the ID from the URL → `GOOGLE_DRIVE_FOLDER_ID`
+
+No need to share the folder with anyone — uploads use **your** account's storage.
+
+## Google Cloud Setup (Service Account — Shared Drives only)
+
+Use this only if you have **Google Workspace** and a **Shared Drive** (not personal My Drive).
+
+1. Enable Google Drive API (steps above)
+2. Create a service account + JSON key
+3. Add the service account as **Content manager** on the Shared Drive
+4. Set `GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL` and `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`
+5. Use a folder ID **inside the Shared Drive**
+6. Do **not** set OAuth variables
 
 ## Local Development
 
@@ -132,14 +166,15 @@ In **Project → Settings → Environment Variables**, add:
 | Variable | Value |
 |---|---|
 | `GOOGLE_DRIVE_FOLDER_ID` | Your Drive folder ID |
-| `GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL` | `client_email` from the JSON key |
-| `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | `private_key` from the JSON key (paste the full PEM, including `-----BEGIN PRIVATE KEY-----`) |
+| `GOOGLE_OAUTH_CLIENT_ID` | OAuth Desktop app client ID |
+| `GOOGLE_OAUTH_CLIENT_SECRET` | OAuth client secret |
+| `GOOGLE_OAUTH_REFRESH_TOKEN` | From `npm run get-refresh-token` |
+
+Remove any `GOOGLE_SERVICE_ACCOUNT_*` variables if you were using them — they do not work with personal Drive.
 
 > **Do not set `VITE_API_URL` on Vercel.** The frontend and API share the same domain, so requests go to `/api/upload/init` automatically.
 
-> **Private key tip:** In the Vercel dashboard, paste the entire private key with real line breaks. You do not need to escape `\n` like in a local `.env` file.
-
-Apply variables to **Production**, **Preview**, and **Development**.
+Apply variables to **Production**, **Preview**, and **Development**, then **redeploy**.
 
 ### 4. Deploy
 

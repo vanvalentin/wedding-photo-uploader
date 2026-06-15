@@ -1,23 +1,46 @@
-import { JWT } from 'google-auth-library';
+import { JWT, OAuth2Client } from 'google-auth-library';
 import { config } from './config.js';
 
+/** Minimal scope: create files in folders the authorized user owns */
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 
-let authClient: JWT | null = null;
+let jwtClient: JWT | null = null;
+let oauth2Client: OAuth2Client | null = null;
 
-function getAuthClient(): JWT {
-  if (!authClient) {
-    authClient = new JWT({
+function getJwtClient(): JWT {
+  if (!config.googleServiceAccount) {
+    throw new Error('Service account credentials are not configured');
+  }
+  if (!jwtClient) {
+    jwtClient = new JWT({
       email: config.googleServiceAccount.clientEmail,
       key: config.googleServiceAccount.privateKey,
       scopes: [DRIVE_SCOPE],
     });
   }
-  return authClient;
+  return jwtClient;
+}
+
+function getOAuth2Client(): OAuth2Client {
+  if (!config.googleOAuth) {
+    throw new Error('OAuth credentials are not configured');
+  }
+  if (!oauth2Client) {
+    oauth2Client = new OAuth2Client(
+      config.googleOAuth.clientId,
+      config.googleOAuth.clientSecret
+    );
+    oauth2Client.setCredentials({
+      refresh_token: config.googleOAuth.refreshToken,
+    });
+  }
+  return oauth2Client;
 }
 
 export async function getAccessToken(): Promise<string> {
-  const client = getAuthClient();
+  const client =
+    config.googleAuthMode === 'oauth' ? getOAuth2Client() : getJwtClient();
+
   const { token } = await client.getAccessToken();
   if (!token) {
     throw new Error('Failed to obtain Google access token');
@@ -35,6 +58,25 @@ export interface ResumableSessionOptions {
 export interface ResumableSessionResult {
   sessionUri: string;
   fileName: string;
+}
+
+function parseDriveError(errorBody: string): string | null {
+  try {
+    const parsed = JSON.parse(errorBody) as {
+      error?: { errors?: Array<{ reason?: string }>; message?: string };
+    };
+    const reason = parsed.error?.errors?.[0]?.reason;
+    if (reason === 'storageQuotaExceeded') {
+      return (
+        'Service accounts cannot store files on personal Google Drive (no storage quota). ' +
+        'Use OAuth credentials instead (recommended) — see README. ' +
+        'Service accounts only work with Google Workspace Shared Drives.'
+      );
+    }
+    return parsed.error?.message ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -72,7 +114,10 @@ export async function createResumableUploadSession(
 
   if (!response.ok) {
     const errorBody = await response.text();
-    throw new Error(`Failed to initiate resumable upload (${response.status}): ${errorBody}`);
+    const friendly = parseDriveError(errorBody);
+    throw new Error(
+      friendly ?? `Failed to initiate resumable upload (${response.status}): ${errorBody}`
+    );
   }
 
   const sessionUri = response.headers.get('Location');
