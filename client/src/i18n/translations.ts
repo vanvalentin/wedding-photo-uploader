@@ -1,4 +1,4 @@
-export type Locale = 'en' | 'fr';
+export type Locale = 'en' | 'fr' | 'zh-HK';
 
 export interface Translations {
   title: string;
@@ -95,5 +95,36 @@ export const translations: Record<Locale, Translations> = {
     uploadMore: 'Téléverser d\'autres fichiers',
     thankYou: 'Merci !',
     thankYouSubtitle: 'Vos souvenirs nous ont été partagés.',
+  },
+  'zh-HK': {
+    title: '分享您的回憶',
+    subtitle: '上載您在我們特別日子拍下的珍貴相片和影片',
+    guestNameLabel: '您的姓名（可選填）',
+    guestNamePlaceholder: '例如：嘉欣 & 家俊',
+    uploadZoneTitle: '點按以新增相片和影片',
+    uploadZoneHint: '或將檔案拖放到這裡',
+    uploadZoneFormats: 'JPEG、PNG、HEIC、MP4、MOV 等格式',
+    selectFiles: '選擇檔案',
+    queueTitle: '您的上載項目',
+    queueEmpty: '尚未選擇檔案',
+    remove: '移除',
+    uploadAll: '送出回憶',
+    uploading: '正在上載…',
+    uploadComplete: '已上載',
+    uploadFailed: '上載失敗',
+    retry: '重試',
+    close: '關閉',
+    beforeUnload: '您有正在上載或尚未送出的檔案。確定要離開嗎？',
+    fileTooLarge: '檔案太大（上限 5 GB）',
+    invalidFileType: '只支援相片和影片',
+    noFilesSelected: '請至少新增一張相片或一段影片',
+    progress: '進度',
+    done: '完成',
+    error: '錯誤',
+    waiting: '等待中',
+    addMore: '新增更多',
+    uploadMore: '上載更多',
+    thankYou: '多謝您！',
+    thankYouSubtitle: '您的回憶已與我們分享。',
   },
 };
