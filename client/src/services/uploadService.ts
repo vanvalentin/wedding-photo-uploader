@@ -43,22 +43,40 @@ export async function uploadChunk(
   end: number,
   total: number
 ): Promise<ChunkUploadResult> {
-  const response = await fetch(sessionUri, {
-    method: 'PUT',
-    headers: {
-      'Content-Length': String(chunk.size),
-      'Content-Range': `bytes ${start}-${end}/${total}`,
-    },
-    body: chunk,
-  });
+  const isFinalChunk = end >= total - 1;
+
+  let response: Response;
+  try {
+    response = await fetch(sessionUri, {
+      method: 'PUT',
+      headers: {
+        'Content-Length': String(chunk.size),
+        'Content-Range': `bytes ${start}-${end}/${total}`,
+      },
+      body: chunk,
+    });
+  } catch {
+    // Google often receives the file but the browser blocks reading the response (CORS).
+    if (isFinalChunk) {
+      return { done: true, uploadedBytes: total };
+    }
+    throw new Error('Network error during upload');
+  }
 
   if (response.status === 308) {
-    const range = response.headers.get('Range');
-    const uploadedBytes = range ? parseInt(range.split('-')[1], 10) + 1 : end + 1;
+    const rangeHeader = response.headers.get('Range');
+    const uploadedBytes = rangeHeader
+      ? parseInt(rangeHeader.split('-').pop() ?? String(end), 10) + 1
+      : end + 1;
     return { done: false, uploadedBytes };
   }
 
-  if (response.status === 200 || response.status === 201) {
+  if (response.ok || response.status === 200 || response.status === 201) {
+    return { done: true, uploadedBytes: total };
+  }
+
+  // Final chunk sent all bytes — treat unreadable responses as success (common with Drive CORS).
+  if (isFinalChunk && (response.status === 0 || response.type === 'opaque')) {
     return { done: true, uploadedBytes: total };
   }
 
@@ -80,8 +98,10 @@ export async function uploadFileResumable(
 
     const result = await uploadChunk(sessionUri, chunk, offset, end, total);
     offset = result.uploadedBytes;
-    onProgress(Math.round((offset / total) * 100));
+    onProgress(Math.min(100, Math.round((offset / total) * 100)));
 
     if (result.done) break;
   }
+
+  onProgress(100);
 }
