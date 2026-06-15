@@ -1,6 +1,22 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { translations, type Locale, type Translations } from './translations';
 
+const LOCALES: Locale[] = ['en', 'fr', 'zh-HK'];
+
+function detectLocale(): Locale {
+  const tags = [navigator.language, ...(navigator.languages ?? [])].map((l) => l.toLowerCase());
+
+  for (const tag of tags) {
+    if (tag.startsWith('fr')) return 'fr';
+    if (tag.startsWith('zh-hk') || tag.startsWith('zh-hant-hk')) return 'zh-HK';
+    if (tag.startsWith('zh-tw') || tag.startsWith('zh-hant-tw')) return 'zh-HK';
+    if (tag === 'zh-hant' || tag.startsWith('zh-hant-')) return 'zh-HK';
+    if (tag.startsWith('zh')) return 'zh-HK';
+  }
+
+  return 'en';
+}
+
 interface I18nContextValue {
   locale: Locale;
   t: Translations;
@@ -11,13 +27,13 @@ interface I18nContextValue {
 const I18nContext = createContext<I18nContextValue | null>(null);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocale] = useState<Locale>(() => {
-    const browserLang = navigator.language.toLowerCase();
-    return browserLang.startsWith('fr') ? 'fr' : 'en';
-  });
+  const [locale, setLocale] = useState<Locale>(detectLocale);
 
   const toggleLocale = useCallback(() => {
-    setLocale((prev) => (prev === 'en' ? 'fr' : 'en'));
+    setLocale((prev) => {
+      const index = LOCALES.indexOf(prev);
+      return LOCALES[(index + 1) % LOCALES.length];
+    });
   }, []);
 
   useEffect(() => {
