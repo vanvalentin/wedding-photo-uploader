@@ -20,6 +20,7 @@ function AppContent() {
     removeFile,
     uploadAll,
     retryFile,
+    resetForMoreUploads,
     setGuestName,
   } = useUploadQueue();
 
@@ -42,6 +43,13 @@ function AppContent() {
             <div className="thank-you-icon" aria-hidden="true">♥</div>
             <h2>{t.thankYou}</h2>
             <p>{t.thankYouSubtitle}</p>
+            <button
+              type="button"
+              className="upload-button thank-you-button"
+              onClick={resetForMoreUploads}
+            >
+              {t.uploadMore}
+            </button>
           </section>
         ) : (
           <>

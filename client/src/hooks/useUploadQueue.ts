@@ -144,6 +144,15 @@ export function useUploadQueue() {
   const hasUnsentFiles = queue.some((f) => f.status === 'pending' || f.status === 'error');
   const hasActiveGuard = isUploading || hasUnsentFiles;
 
+  const resetForMoreUploads = useCallback(() => {
+    setQueue((prev) => {
+      prev.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+      return [];
+    });
+    setAllComplete(false);
+    setIsUploading(false);
+  }, []);
+
   return {
     queue,
     isUploading,
@@ -154,6 +163,7 @@ export function useUploadQueue() {
     removeFile,
     uploadAll,
     retryFile,
+    resetForMoreUploads,
     setGuestName,
   };
 }
