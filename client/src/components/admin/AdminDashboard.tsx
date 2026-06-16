@@ -3,6 +3,7 @@ import type { MediaPreview } from '../../types';
 import {
   addCuratedItem,
   clearAdminSecret,
+  deleteUpload,
   fetchAdminCurated,
   fetchAdminUploads,
   importDriveFolder,
@@ -165,6 +166,27 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
     }
   };
 
+  const handleDeleteUpload = async (item: AdminMediaUploadItem) => {
+    const confirmed = window.confirm(
+      `Delete "${item.fileName}" from Google Drive and remove it from the gallery?\n\nThis moves the file to Drive trash and cannot be undone from here.`
+    );
+    if (!confirmed) return;
+
+    setBusyId(item.id);
+    setActionMessage(null);
+    setError(null);
+
+    try {
+      await deleteUpload(secret, item.id);
+      setActionMessage(`Deleted "${item.fileName}" from Drive`);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete upload');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const openPreview = (id: string) => {
     const index = previewItems.findIndex((item) => item.id === id);
     if (index >= 0) setPreviewIndex(index);
@@ -258,14 +280,24 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
                     disabled={busyId === item.id}
                     onUpdated={loadData}
                   />
-                  <button
-                    type="button"
-                    className="admin-primary-button"
-                    disabled={item.isCurated || busyId === item.id}
-                    onClick={() => handleAddToHighlights(item)}
-                  >
-                    {item.isCurated ? 'In highlights' : busyId === item.id ? 'Adding…' : 'Add to highlights'}
-                  </button>
+                  <div className="admin-card-actions">
+                    <button
+                      type="button"
+                      className="admin-primary-button"
+                      disabled={item.isCurated || busyId === item.id}
+                      onClick={() => handleAddToHighlights(item)}
+                    >
+                      {item.isCurated ? 'In highlights' : busyId === item.id ? 'Adding…' : 'Add to highlights'}
+                    </button>
+                    <button
+                      type="button"
+                      className="admin-danger-button"
+                      disabled={busyId === item.id}
+                      onClick={() => handleDeleteUpload(item)}
+                    >
+                      {busyId === item.id ? 'Deleting…' : 'Delete from Drive'}
+                    </button>
+                  </div>
                 </div>
               </article>
             ))

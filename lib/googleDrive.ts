@@ -3,7 +3,8 @@ import { config } from './config.js';
 
 const DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const DRIVE_READONLY_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
-const DRIVE_SCOPES = [DRIVE_FILE_SCOPE, DRIVE_READONLY_SCOPE];
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive';
+const DRIVE_SCOPES = [DRIVE_FILE_SCOPE, DRIVE_READONLY_SCOPE, DRIVE_SCOPE];
 
 let jwtClient: JWT | null = null;
 
@@ -302,4 +303,26 @@ export async function listAllFolderMediaFiles(): Promise<FolderMediaFile[]> {
   } while (pageToken);
 
   return allFiles;
+}
+
+export async function deleteDriveFile(fileId: string): Promise<void> {
+  const accessToken = await getAccessToken();
+
+  const response = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?supportsAllDrives=true`,
+    {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }
+  );
+
+  if (response.status === 404) return;
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    const friendly = parseDriveError(errorBody);
+    throw new Error(
+      friendly ?? `Failed to delete Drive file (${response.status}): ${errorBody}`
+    );
+  }
 }
