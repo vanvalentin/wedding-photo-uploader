@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { updateUploadTakenAt } from '../../services/adminService';
+import { patchUpload } from '../../services/adminService';
 import {
   formatMediaDateLabel,
   toParisDateTimeLocalInput,
@@ -48,7 +48,7 @@ export function AdminTakenDateEditor({
     setError(null);
 
     try {
-      await updateUploadTakenAt(secret, uploadId, value);
+      await patchUpload(secret, uploadId, { takenAt: value });
       setEditing(false);
       onUpdated();
     } catch (err) {

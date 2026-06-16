@@ -14,6 +14,7 @@ export interface AdminMediaUploadItem {
   thumbnailUrl: string;
   viewUrl: string;
   isCurated: boolean;
+  reviewed: boolean;
 }
 
 export interface AdminCuratedItem {
@@ -54,6 +55,7 @@ export function mapUploadRow(
     thumbnailUrl: toThumbnailUrl(row.drive_file_id),
     viewUrl: toViewUrl(row.drive_file_id),
     isCurated: curatedDriveIds.has(row.drive_file_id),
+    reviewed: row.reviewed ?? false,
   };
 }
 

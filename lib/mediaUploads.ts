@@ -11,6 +11,7 @@ export interface MediaUploadRow {
   file_size: number | null;
   taken_at: string | null;
   uploaded_at: string;
+  reviewed: boolean;
 }
 
 export interface InsertMediaUploadInput {
@@ -131,12 +132,15 @@ export async function insertMediaUpload(input: InsertMediaUploadInput): Promise<
   return data;
 }
 
-export async function updateMediaUploadTakenAt(
+export async function patchMediaUpload(
   id: string,
-  takenAt: string | null
+  updates: { takenAt?: string | null; reviewed?: boolean }
 ): Promise<void> {
+  if (updates.takenAt === undefined && updates.reviewed === undefined) {
+    throw new Error('No updates provided');
+  }
+
   const supabase = getSupabaseAdmin();
-  const normalized = takenAt === null ? null : normalizeTimestamp(takenAt);
 
   const { data: row, error: fetchError } = await supabase
     .from('media_uploads')
@@ -152,22 +156,32 @@ export async function updateMediaUploadTakenAt(
     throw new Error('Media upload not found');
   }
 
-  const { error } = await supabase
-    .from('media_uploads')
-    .update({ taken_at: normalized })
-    .eq('id', id);
+  const payload: Record<string, unknown> = {};
 
-  if (error) {
-    throw new Error(`Failed to update taken date: ${error.message}`);
+  if (updates.takenAt !== undefined) {
+    payload.taken_at = updates.takenAt === null ? null : normalizeTimestamp(updates.takenAt);
   }
 
-  const { error: curatedError } = await supabase
-    .from('curated_gallery')
-    .update({ taken_at: normalized })
-    .eq('drive_file_id', row.drive_file_id);
+  if (updates.reviewed !== undefined) {
+    payload.reviewed = updates.reviewed;
+  }
 
-  if (curatedError) {
-    throw new Error(`Failed to sync curated taken date: ${curatedError.message}`);
+  const { error } = await supabase.from('media_uploads').update(payload).eq('id', id);
+
+  if (error) {
+    throw new Error(`Failed to update media upload: ${error.message}`);
+  }
+
+  if (updates.takenAt !== undefined) {
+    const normalized = updates.takenAt === null ? null : normalizeTimestamp(updates.takenAt);
+    const { error: curatedError } = await supabase
+      .from('curated_gallery')
+      .update({ taken_at: normalized })
+      .eq('drive_file_id', row.drive_file_id);
+
+    if (curatedError) {
+      throw new Error(`Failed to sync curated taken date: ${curatedError.message}`);
+    }
   }
 }
 

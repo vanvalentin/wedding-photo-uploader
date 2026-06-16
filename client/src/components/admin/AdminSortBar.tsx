@@ -1,4 +1,4 @@
-import type { AdminSortDirection, AdminSortField } from '../../utils/formatDateTime';
+import type { AdminReviewFilter, AdminSortDirection, AdminSortField } from '../../utils/formatDateTime';
 
 interface AdminSortBarProps {
   sortField: AdminSortField;
@@ -6,6 +6,9 @@ interface AdminSortBarProps {
   onSortFieldChange: (field: AdminSortField) => void;
   onSortDirectionChange: (direction: AdminSortDirection) => void;
   uploadDateLabel?: string;
+  reviewFilter?: AdminReviewFilter;
+  onReviewFilterChange?: (filter: AdminReviewFilter) => void;
+  showReviewFilter?: boolean;
 }
 
 export function AdminSortBar({
@@ -14,6 +17,9 @@ export function AdminSortBar({
   onSortFieldChange,
   onSortDirectionChange,
   uploadDateLabel = 'Upload date',
+  reviewFilter = 'all',
+  onReviewFilterChange,
+  showReviewFilter = false,
 }: AdminSortBarProps) {
   return (
     <div className="admin-sort-bar">
@@ -39,6 +45,20 @@ export function AdminSortBar({
           <option value="asc">Oldest first</option>
         </select>
       </label>
+      {showReviewFilter && onReviewFilterChange && (
+        <label className="admin-sort-label">
+          Review
+          <select
+            className="admin-sort-select"
+            value={reviewFilter}
+            onChange={(event) => onReviewFilterChange(event.target.value as AdminReviewFilter)}
+          >
+            <option value="all">All</option>
+            <option value="unreviewed">To review</option>
+            <option value="reviewed">Reviewed</option>
+          </select>
+        </label>
+      )}
     </div>
   );
 }

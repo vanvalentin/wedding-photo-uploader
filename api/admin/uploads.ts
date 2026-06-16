@@ -4,13 +4,18 @@ import { verifyAdminSecret, isAdminConfigured } from '../../lib/adminAuth.js';
 import { getAdminUploadItems } from '../../lib/adminGallery.js';
 import {
   isMediaRegistryConfigured,
-  updateMediaUploadTakenAt,
+  patchMediaUpload,
 } from '../../lib/mediaUploads.js';
 
-const updateTakenAtSchema = z.object({
-  id: z.string().uuid(),
-  takenAt: z.union([z.string().min(1), z.null()]),
-});
+const patchUploadSchema = z
+  .object({
+    id: z.string().uuid(),
+    takenAt: z.union([z.string().min(1), z.null()]).optional(),
+    reviewed: z.boolean().optional(),
+  })
+  .refine((data) => data.takenAt !== undefined || data.reviewed !== undefined, {
+    message: 'Provide takenAt and/or reviewed',
+  });
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
@@ -51,7 +56,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (req.method === 'PATCH') {
-    const parsed = updateTakenAtSchema.safeParse(req.body);
+    const parsed = patchUploadSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({
         error: 'Invalid request',
@@ -61,12 +66,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-      await updateMediaUploadTakenAt(parsed.data.id, parsed.data.takenAt);
+      await patchMediaUpload(parsed.data.id, {
+        takenAt: parsed.data.takenAt,
+        reviewed: parsed.data.reviewed,
+      });
       res.status(200).json({ ok: true });
     } catch (error) {
-      console.error('Admin update taken date error:', error);
+      console.error('Admin patch upload error:', error);
       res.status(400).json({
-        error: 'Failed to update taken date',
+        error: 'Failed to update upload',
         message: error instanceof Error ? error.message : 'Unknown error',
       });
     }

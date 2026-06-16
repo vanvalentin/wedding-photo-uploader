@@ -6,6 +6,7 @@ import {
   fetchAdminCurated,
   fetchAdminUploads,
   importDriveFolder,
+  patchUpload,
   removeCuratedItem,
   type AdminCuratedItem,
   type AdminMediaUploadItem,
@@ -14,8 +15,10 @@ import { Lightbox } from '../Lightbox';
 import { AdminSortBar } from './AdminSortBar';
 import { AdminTakenDateEditor } from './AdminTakenDateEditor';
 import {
+  filterByReviewStatus,
   formatMediaDateLabel,
   sortByMediaDate,
+  type AdminReviewFilter,
   type AdminSortDirection,
   type AdminSortField,
 } from '../../utils/formatDateTime';
@@ -39,6 +42,7 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
   const [importing, setImporting] = useState(false);
   const [sortField, setSortField] = useState<AdminSortField>('taken');
   const [sortDirection, setSortDirection] = useState<AdminSortDirection>('desc');
+  const [reviewFilter, setReviewFilter] = useState<AdminReviewFilter>('unreviewed');
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -65,6 +69,16 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
   const sortedUploads = useMemo(
     () => sortByMediaDate(uploads, sortField, sortDirection, 'uploadedAt'),
     [uploads, sortField, sortDirection]
+  );
+
+  const filteredUploads = useMemo(
+    () => filterByReviewStatus(sortedUploads, reviewFilter),
+    [sortedUploads, reviewFilter]
+  );
+
+  const unreviewedCount = useMemo(
+    () => uploads.filter((item) => !item.reviewed).length,
+    [uploads]
   );
 
   const sortedCurated = useMemo(
@@ -107,6 +121,25 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
       await loadData();
     } catch (err) {
       setActionMessage(err instanceof Error ? err.message : 'Failed to remove highlight');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleToggleReviewed = async (item: AdminMediaUploadItem) => {
+    setBusyId(item.id);
+    setActionMessage(null);
+    setError(null);
+
+    try {
+      await patchUpload(secret, item.id, { reviewed: !item.reviewed });
+      setUploads((current) =>
+        current.map((upload) =>
+          upload.id === item.id ? { ...upload, reviewed: !item.reviewed } : upload
+        )
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update review status');
     } finally {
       setBusyId(null);
     }
@@ -178,7 +211,8 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
           aria-selected={tab === 'uploads'}
           onClick={() => setTab('uploads')}
         >
-          All uploads ({uploads.length})
+          All uploads ({uploads.length}
+          {unreviewedCount > 0 ? ` · ${unreviewedCount} to review` : ''})
         </button>
         <button
           type="button"
@@ -198,6 +232,9 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
           onSortFieldChange={setSortField}
           onSortDirectionChange={setSortDirection}
           uploadDateLabel={tab === 'curated' ? 'Added date' : 'Upload date'}
+          showReviewFilter={tab === 'uploads'}
+          reviewFilter={reviewFilter}
+          onReviewFilterChange={setReviewFilter}
         />
       )}
 
@@ -211,16 +248,24 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
             Existing photos already in your Drive folder? Click <strong>Import from Drive</strong> once to register them here.
           </p>
           <div className="admin-grid">
-          {sortedUploads.length === 0 ? (
+          {filteredUploads.length === 0 ? (
             <p className="admin-empty">
-              No uploads registered yet. Use Import from Drive for existing folder photos, or wait for new guest uploads.
+              {reviewFilter === 'unreviewed'
+                ? 'All uploads have been reviewed.'
+                : reviewFilter === 'reviewed'
+                  ? 'No reviewed uploads yet.'
+                  : 'No uploads registered yet. Use Import from Drive for existing folder photos, or wait for new guest uploads.'}
             </p>
           ) : (
-            sortedUploads.map((item) => (
-              <article key={item.id} className="admin-card">
+            filteredUploads.map((item) => (
+              <article
+                key={item.id}
+                className={`admin-card${item.reviewed ? ' admin-card-reviewed' : ''}`}
+              >
                 <button type="button" className="admin-card-preview" onClick={() => openPreview(item)}>
                   <img src={item.thumbnailUrl} alt={item.fileName} loading="lazy" />
                   {item.isVideo && <span className="video-badge" aria-hidden="true">▶</span>}
+                  {item.reviewed && <span className="admin-reviewed-badge">Reviewed</span>}
                 </button>
                 <div className="admin-card-body">
                   <p className="admin-card-title">{item.fileName}</p>
@@ -233,6 +278,18 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
                     disabled={busyId === item.id}
                     onUpdated={loadData}
                   />
+                  <button
+                    type="button"
+                    className="admin-secondary-button"
+                    disabled={busyId === item.id}
+                    onClick={() => handleToggleReviewed(item)}
+                  >
+                    {busyId === item.id
+                      ? 'Saving…'
+                      : item.reviewed
+                        ? 'Mark unreviewed'
+                        : 'Mark reviewed'}
+                  </button>
                   <button
                     type="button"
                     className="admin-primary-button"
