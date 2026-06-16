@@ -2,8 +2,8 @@
  * One-time CLI import: register all photos/videos in GOOGLE_DRIVE_FOLDER_ID into Supabase.
  *
  * Prerequisites:
- *   - .env with Google OAuth, GOOGLE_DRIVE_FOLDER_ID, SUPABASE_URL, SUPABASE_SECRET_KEY
- *   - OAuth refresh token must include drive.readonly (re-run npm run get-refresh-token if import fails)
+ *   - .env with service account vars, GOOGLE_DRIVE_FOLDER_ID, SUPABASE_URL, SUPABASE_SECRET_KEY
+ *   - Service account is Content manager on the Shared Drive
  *
  * Usage:
  *   npm run import-drive
@@ -21,8 +21,7 @@ try {
 } catch (error) {
   console.error('\nImport failed:', error instanceof Error ? error.message : error);
   console.error(
-    '\nIf you see a 403 or "insufficient permissions", re-authorize Google with drive.readonly:\n' +
-      '  npm run get-refresh-token\n'
+    '\nCheck that GOOGLE_DRIVE_FOLDER_ID is inside a Shared Drive and the service account is a member.\n'
   );
   process.exit(1);
 }
