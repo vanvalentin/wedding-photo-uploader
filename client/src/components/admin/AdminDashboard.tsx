@@ -11,6 +11,7 @@ import {
   type AdminMediaUploadItem,
 } from '../../services/adminService';
 import { Lightbox } from '../Lightbox';
+import { formatParisDateTime } from '../../utils/formatDateTime';
 
 interface AdminDashboardProps {
   secret: string;
@@ -18,11 +19,6 @@ interface AdminDashboardProps {
 }
 
 type AdminTab = 'uploads' | 'curated';
-
-function formatDate(value: string | null): string {
-  if (!value) return '—';
-  return new Date(value).toLocaleString();
-}
 
 export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
   const [tab, setTab] = useState<AdminTab>('uploads');
@@ -200,7 +196,7 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
                 <div className="admin-card-body">
                   <p className="admin-card-title">{item.fileName}</p>
                   {item.guestName && <p className="admin-card-meta">By {item.guestName}</p>}
-                  <p className="admin-card-meta">{formatDate(item.uploadedAt)}</p>
+                  <p className="admin-card-meta">{formatParisDateTime(item.uploadedAt)}</p>
                   <button
                     type="button"
                     className="admin-primary-button"
