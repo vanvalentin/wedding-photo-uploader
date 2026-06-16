@@ -205,3 +205,54 @@ export async function fetchDriveMedia(fileId: string): Promise<Response> {
     { headers: { Authorization: `Bearer ${accessToken}` } }
   );
 }
+
+function escapeDriveQueryValue(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
+export async function findRecentFileInFolder(
+  fileName: string,
+  options?: { fileSize?: number; maxAgeMs?: number }
+): Promise<DriveFileMetadata | null> {
+  const accessToken = await getAccessToken();
+  const maxAgeMs = options?.maxAgeMs ?? 15 * 60 * 1000;
+  const escapedName = escapeDriveQueryValue(fileName);
+  const query = [
+    `'${config.googleDriveFolderId}' in parents`,
+    `name = '${escapedName}'`,
+    'trashed = false',
+  ].join(' and ');
+
+  const fields = [
+    'files(id,name,mimeType,thumbnailLink,createdTime,size,imageMediaMetadata,videoMediaMetadata)',
+  ].join(',');
+
+  const response = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=${encodeURIComponent(fields)}&orderBy=createdTime desc&pageSize=10&supportsAllDrives=true&includeItemsFromAllDrives=true`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Failed to search Drive folder (${response.status}): ${errorBody}`);
+  }
+
+  const payload = (await response.json()) as { files?: Array<DriveFileMetadata & { size?: string }> };
+  const files = payload.files ?? [];
+  if (files.length === 0) return null;
+
+  const cutoff = Date.now() - maxAgeMs;
+  const recentFiles = files.filter((file) => {
+    if (!file.createdTime) return true;
+    return new Date(file.createdTime).getTime() >= cutoff;
+  });
+
+  if (recentFiles.length === 0) return null;
+
+  if (options?.fileSize) {
+    const sizeMatch = recentFiles.find((file) => Number(file.size) === options.fileSize);
+    if (sizeMatch) return sizeMatch;
+  }
+
+  return recentFiles[0] ?? null;
+}

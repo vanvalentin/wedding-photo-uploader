@@ -17,6 +17,8 @@ Guests can optionally identify themselves, preview their media in a queue, and u
 - **Exit guard** — browser warning if leaving during active or unsent uploads
 - **Upload success summary** — photo/video counts and a thumbnail grid with load-more
 - **Curated highlights gallery** — host-picked favourites from Google Drive via Supabase (optional)
+- **Upload registry** — successful guest uploads are registered in Supabase automatically
+- **Admin curation UI** — browse all uploads and add/remove highlights at `/admin`
 
 ## Architecture
 
@@ -55,8 +57,10 @@ Copy `.env.example` to `.env` in the project root (or set these in Vercel):
 | `VITE_API_URL` | No | Leave **empty** on Vercel |
 | `SUPABASE_URL` | Curated gallery | Supabase project URL |
 | `SUPABASE_ANON_KEY` | Curated gallery | Supabase anon key (server reads curated rows) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Upload registry + admin | Service role key for writes to Supabase |
 | `VITE_SUPABASE_URL` | Curated gallery | Same URL for client (optional; gallery uses API) |
 | `VITE_SUPABASE_ANON_KEY` | Curated gallery | Same anon key for client (optional) |
+| `ADMIN_SECRET` | Admin UI | Password for `/admin` gallery curation |
 
 \* Use OAuth for **personal Google Drive** (Gmail). This is the recommended setup.
 
@@ -206,7 +210,8 @@ Health check: `GET https://your-project.vercel.app/api/upload/health`
 - Only the small `/api/upload/init` call hits your server — large file bytes go directly to Google Drive
 - No database or persistent server required
 
-- No database required for uploads (Supabase is optional, for curated gallery only)
+- Only the small `/api/upload/init` and `/api/upload/complete` calls hit your server — large file bytes go directly to Google Drive
+- Supabase is optional but recommended for upload registry, highlights, and admin curation
 
 ## Curated Highlights Gallery (optional)
 
@@ -215,9 +220,26 @@ The home screen can show a **Highlights** section — a host-curated grid of fav
 ### Setup
 
 1. Create a Supabase project (or use an existing one).
-2. Run the migration in `supabase/migrations/20250616000000_create_curated_gallery.sql`.
-3. Add `SUPABASE_URL` and `SUPABASE_ANON_KEY` to your `.env` / Vercel env vars.
-4. In the Supabase dashboard, insert rows into `curated_gallery`:
+2. Run migrations in `supabase/migrations/` (`curated_gallery` + `media_uploads`).
+3. Add to `.env` / Vercel:
+   - `SUPABASE_URL`
+   - `SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY` (required for upload registry + admin writes)
+   - `ADMIN_SECRET` (for `/admin`)
+4. Guest uploads are registered automatically via `POST /api/upload/complete` after each successful Drive upload.
+
+### Admin UI (`/admin`)
+
+1. Open `/admin` on your deployed site (or `http://localhost:5173/admin` in dev).
+2. Sign in with your `ADMIN_SECRET`.
+3. **All uploads** — every registered guest upload, newest first. Click **Add to highlights** to feature one.
+4. **Highlights** — current curated gallery shown to guests. Click **Remove** to un-feature.
+
+You can still insert rows manually in Supabase if needed, but the admin UI is the recommended workflow.
+
+### Manual SQL (alternative)
+
+Insert rows into `curated_gallery`:
 
 | Column | Description |
 |---|---|
@@ -229,7 +251,7 @@ The home screen can show a **Highlights** section — a host-curated grid of fav
 
 Thumbnails and full-size previews are proxied through `/api/media/thumbnail` and `/api/media/view` using your Google OAuth credentials.
 
-If Supabase is not configured or the table is empty, the Highlights section is hidden automatically.
+If Supabase is not configured or the highlights table is empty, the Highlights section is hidden automatically.
 
 ## Production Build (self-hosted alternative)
 
@@ -246,18 +268,27 @@ The Express server runs via `tsx` and serves the built React app from `client/di
 ├── api/                    # Vercel serverless functions
 │   ├── upload/
 │   │   ├── init.ts         # POST — start resumable upload session
+│   │   ├── complete.ts     # POST — register upload in Supabase
 │   │   └── health.ts       # GET — health check
+│   ├── admin/
+│   │   ├── uploads.ts      # GET — list registered uploads (admin)
+│   │   └── curated.ts      # GET/POST/DELETE — manage highlights (admin)
 │   ├── gallery/
 │   │   └── curated.ts      # GET — curated highlights from Supabase
 │   └── media/
 │       ├── thumbnail.ts    # GET — proxy Drive thumbnail
 │       └── view.ts         # GET — proxy full media for lightbox
 ├── lib/                    # Shared backend logic (Vercel + Express)
+│   ├── adminAuth.ts
+│   ├── adminGallery.ts
 │   ├── config.ts
 │   ├── gallery.ts
 │   ├── googleDrive.ts
+│   ├── mediaUploads.ts
 │   ├── supabase.ts
+│   ├── uploadComplete.ts
 │   └── uploadInit.ts
+├── supabase/migrations/    # Supabase schema
 ├── client/                 # Vite + React frontend
 │   └── src/
 │       ├── components/     # UI components

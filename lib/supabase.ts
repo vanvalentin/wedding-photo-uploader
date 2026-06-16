@@ -11,13 +11,23 @@ export interface CuratedGalleryRow {
 }
 
 let supabaseClient: SupabaseClient | null = null;
+let supabaseServiceRoleClient: SupabaseClient | null = null;
+
+function getSupabaseUrl(): string | null {
+  return process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? null;
+}
+
+function getSupabaseAnonKey(): string | null {
+  return process.env.SUPABASE_ANON_KEY ?? process.env.VITE_SUPABASE_ANON_KEY ?? null;
+}
+
+function getSupabaseServiceRoleKey(): string | null {
+  return process.env.SUPABASE_SERVICE_ROLE_KEY ?? null;
+}
 
 function getSupabaseConfig(): { url: string; key: string } | null {
-  const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
-  const key =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ??
-    process.env.SUPABASE_ANON_KEY ??
-    process.env.VITE_SUPABASE_ANON_KEY;
+  const url = getSupabaseUrl();
+  const key = getSupabaseServiceRoleKey() ?? getSupabaseAnonKey();
 
   if (!url || !key) return null;
   return { url, key };
@@ -25,6 +35,10 @@ function getSupabaseConfig(): { url: string; key: string } | null {
 
 export function isSupabaseConfigured(): boolean {
   return getSupabaseConfig() !== null;
+}
+
+export function isSupabaseServiceRoleConfigured(): boolean {
+  return Boolean(getSupabaseUrl() && getSupabaseServiceRoleKey());
 }
 
 export function getSupabase(): SupabaseClient {
@@ -40,6 +54,23 @@ export function getSupabase(): SupabaseClient {
   }
 
   return supabaseClient;
+}
+
+export function getSupabaseServiceRole(): SupabaseClient {
+  const url = getSupabaseUrl();
+  const key = getSupabaseServiceRoleKey();
+
+  if (!url || !key) {
+    throw new Error(
+      'Supabase service role is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.'
+    );
+  }
+
+  if (!supabaseServiceRoleClient) {
+    supabaseServiceRoleClient = createClient(url, key);
+  }
+
+  return supabaseServiceRoleClient;
 }
 
 export async function fetchCuratedGallery(): Promise<CuratedGalleryRow[]> {

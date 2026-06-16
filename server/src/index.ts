@@ -11,13 +11,14 @@ import cors from 'cors';
 import { config } from './config.js';
 import { uploadRouter } from './routes/upload.js';
 import { galleryRouter, mediaRouter } from './routes/gallery.js';
+import { adminRouter } from './routes/admin.js';
 
 const app = express();
 
 app.use(
   cors({
     origin: config.corsOrigin.split(',').map((o) => o.trim()),
-    methods: ['GET', 'POST', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   })
 );
 app.use(express.json({ limit: '1mb' }));
@@ -25,6 +26,7 @@ app.use(express.json({ limit: '1mb' }));
 app.use('/api/upload', uploadRouter);
 app.use('/api/gallery', galleryRouter);
 app.use('/api/media', mediaRouter);
+app.use('/api/admin', adminRouter);
 
 // Serve built client in production
 if (config.nodeEnv === 'production') {
