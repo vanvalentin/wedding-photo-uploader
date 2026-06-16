@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { MediaPreview } from '../../types';
 import {
   addCuratedItem,
@@ -11,7 +11,14 @@ import {
   type AdminMediaUploadItem,
 } from '../../services/adminService';
 import { Lightbox } from '../Lightbox';
-import { formatMediaDateLabel } from '../../utils/formatDateTime';
+import { AdminSortBar } from './AdminSortBar';
+import { AdminTakenDateEditor } from './AdminTakenDateEditor';
+import {
+  formatMediaDateLabel,
+  sortByMediaDate,
+  type AdminSortDirection,
+  type AdminSortField,
+} from '../../utils/formatDateTime';
 
 interface AdminDashboardProps {
   secret: string;
@@ -30,6 +37,8 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
   const [previewItem, setPreviewItem] = useState<MediaPreview | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
+  const [sortField, setSortField] = useState<AdminSortField>('taken');
+  const [sortDirection, setSortDirection] = useState<AdminSortDirection>('desc');
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -52,6 +61,16 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const sortedUploads = useMemo(
+    () => sortByMediaDate(uploads, sortField, sortDirection, 'uploadedAt'),
+    [uploads, sortField, sortDirection]
+  );
+
+  const sortedCurated = useMemo(
+    () => sortByMediaDate(curated, sortField, sortDirection, 'createdAt'),
+    [curated, sortField, sortDirection]
+  );
 
   const handleLogout = () => {
     clearAdminSecret();
@@ -172,6 +191,16 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
         </button>
       </div>
 
+      {!loading && (
+        <AdminSortBar
+          sortField={sortField}
+          sortDirection={sortDirection}
+          onSortFieldChange={setSortField}
+          onSortDirectionChange={setSortDirection}
+          uploadDateLabel={tab === 'curated' ? 'Added date' : 'Upload date'}
+        />
+      )}
+
       {actionMessage && <p className="admin-message">{actionMessage}</p>}
       {error && <p className="admin-error">{error}</p>}
       {loading && <p className="admin-loading">Loading…</p>}
@@ -182,12 +211,12 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
             Existing photos already in your Drive folder? Click <strong>Import from Drive</strong> once to register them here.
           </p>
           <div className="admin-grid">
-          {uploads.length === 0 ? (
+          {sortedUploads.length === 0 ? (
             <p className="admin-empty">
               No uploads registered yet. Use Import from Drive for existing folder photos, or wait for new guest uploads.
             </p>
           ) : (
-            uploads.map((item) => (
+            sortedUploads.map((item) => (
               <article key={item.id} className="admin-card">
                 <button type="button" className="admin-card-preview" onClick={() => openPreview(item)}>
                   <img src={item.thumbnailUrl} alt={item.fileName} loading="lazy" />
@@ -196,9 +225,14 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
                 <div className="admin-card-body">
                   <p className="admin-card-title">{item.fileName}</p>
                   {item.guestName && <p className="admin-card-meta">By {item.guestName}</p>}
-                  <p className="admin-card-meta">
-                    {formatMediaDateLabel(item.takenAt, item.uploadedAt)}
-                  </p>
+                  <AdminTakenDateEditor
+                    uploadId={item.id}
+                    takenAt={item.takenAt}
+                    uploadedAt={item.uploadedAt}
+                    secret={secret}
+                    disabled={busyId === item.id}
+                    onUpdated={loadData}
+                  />
                   <button
                     type="button"
                     className="admin-primary-button"
@@ -217,10 +251,10 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
 
       {!loading && tab === 'curated' && (
         <div className="admin-grid">
-          {curated.length === 0 ? (
+          {sortedCurated.length === 0 ? (
             <p className="admin-empty">No highlights yet. Add uploads from the All uploads tab.</p>
           ) : (
-            curated.map((item) => (
+            sortedCurated.map((item) => (
               <article key={item.id} className="admin-card">
                 <button type="button" className="admin-card-preview" onClick={() => openPreview(item)}>
                   <img src={item.thumbnailUrl} alt={item.fileName ?? 'Highlight'} loading="lazy" />

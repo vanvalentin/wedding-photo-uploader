@@ -131,6 +131,46 @@ export async function insertMediaUpload(input: InsertMediaUploadInput): Promise<
   return data;
 }
 
+export async function updateMediaUploadTakenAt(
+  id: string,
+  takenAt: string | null
+): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  const normalized = takenAt === null ? null : normalizeTimestamp(takenAt);
+
+  const { data: row, error: fetchError } = await supabase
+    .from('media_uploads')
+    .select('drive_file_id')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (fetchError) {
+    throw new Error(`Failed to load media upload: ${fetchError.message}`);
+  }
+
+  if (!row) {
+    throw new Error('Media upload not found');
+  }
+
+  const { error } = await supabase
+    .from('media_uploads')
+    .update({ taken_at: normalized })
+    .eq('id', id);
+
+  if (error) {
+    throw new Error(`Failed to update taken date: ${error.message}`);
+  }
+
+  const { error: curatedError } = await supabase
+    .from('curated_gallery')
+    .update({ taken_at: normalized })
+    .eq('drive_file_id', row.drive_file_id);
+
+  if (curatedError) {
+    throw new Error(`Failed to sync curated taken date: ${curatedError.message}`);
+  }
+}
+
 export async function fetchMediaUploads(limit = 200): Promise<MediaUploadRow[]> {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase

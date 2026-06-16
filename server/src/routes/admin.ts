@@ -7,6 +7,7 @@ import {
   deleteCuratedItem,
   insertCuratedItem,
   isMediaRegistryConfigured,
+  updateMediaUploadTakenAt,
 } from '../../../lib/mediaUploads.js';
 
 export const adminRouter = Router();
@@ -69,6 +70,35 @@ const addCuratedSchema = z.object({
   sortOrder: z.number().int().min(0).max(10000).optional(),
   isVideo: z.boolean().optional(),
   takenAt: z.string().datetime().optional(),
+});
+
+const updateTakenAtSchema = z.object({
+  id: z.string().uuid(),
+  takenAt: z.union([z.string().min(1), z.null()]),
+});
+
+adminRouter.patch('/uploads', async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+
+  const parsed = updateTakenAtSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({
+      error: 'Invalid request',
+      details: parsed.error.flatten().fieldErrors,
+    });
+    return;
+  }
+
+  try {
+    await updateMediaUploadTakenAt(parsed.data.id, parsed.data.takenAt);
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('Admin update taken date error:', error);
+    res.status(400).json({
+      error: 'Failed to update taken date',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
 });
 
 adminRouter.post('/curated', async (req, res) => {

@@ -78,5 +78,11 @@ export function normalizeTimestamp(value: string | null | undefined): string | n
     return parisLocalDateTimeToUtcIso(trimmed);
   }
 
+  const naiveIso = trimmed.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(?::(\d{2}))?$/);
+  if (naiveIso) {
+    const seconds = naiveIso[3] ?? '00';
+    return parisLocalDateTimeToUtcIso(`${naiveIso[1]} ${naiveIso[2]}:${seconds}`);
+  }
+
   return trimmed;
 }
