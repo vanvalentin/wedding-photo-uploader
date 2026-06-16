@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { processUploadInit } from '../../../lib/uploadInit.js';
+import { processUploadComplete } from '../../../lib/uploadComplete.js';
 
 export const uploadRouter = Router();
 
@@ -18,6 +19,24 @@ uploadRouter.post('/init', async (req, res) => {
   res.json({
     sessionUri: result.sessionUri,
     fileName: result.fileName,
+  });
+});
+
+uploadRouter.post('/complete', async (req, res) => {
+  const result = await processUploadComplete(req.body);
+
+  if (!result.ok) {
+    res.status(result.status).json({
+      error: result.error,
+      ...(result.message ? { message: result.message } : {}),
+      ...(result.details ? { details: result.details } : {}),
+    });
+    return;
+  }
+
+  res.json({
+    driveFileId: result.driveFileId,
+    alreadyRegistered: result.alreadyRegistered,
   });
 });
 

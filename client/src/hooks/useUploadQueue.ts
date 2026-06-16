@@ -1,7 +1,11 @@
 import { useCallback, useRef, useState } from 'react';
 import type { QueuedFile } from '../types';
 import { ACCEPTED_TYPES, MAX_FILE_SIZE } from '../types';
-import { initUploadSession, uploadFileResumable } from '../services/uploadService';
+import {
+  initUploadSession,
+  registerUploadComplete,
+  uploadFileResumable,
+} from '../services/uploadService';
 
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -9,13 +13,44 @@ function generateId(): string {
 
 function isAcceptedFile(file: File): boolean {
   if (ACCEPTED_TYPES.includes(file.type)) return true;
-  // Fallback for HEIC and other types browsers may not report correctly
   const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
   return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif', 'mp4', 'mov', 'webm', 'avi'].includes(ext);
 }
 
 function isVideoFile(file: File): boolean {
   return file.type.startsWith('video/') || ['mp4', 'mov', 'webm', 'avi'].includes(file.name.split('.').pop()?.toLowerCase() ?? '');
+}
+
+async function uploadQueueItem(
+  item: QueuedFile,
+  guestName: string,
+  updateFile: (id: string, updates: Partial<Pick<QueuedFile, 'status' | 'progress' | 'error'>>) => void
+): Promise<void> {
+  const mimeType = item.file.type || (item.isVideo ? 'video/mp4' : 'image/jpeg');
+  const { sessionUri, fileName: driveFileName } = await initUploadSession(
+    item.file.name,
+    mimeType,
+    item.file.size,
+    guestName || undefined
+  );
+
+  await uploadFileResumable(item.file, sessionUri, (progress) => {
+    updateFile(item.id, { progress });
+  });
+
+  try {
+    await registerUploadComplete({
+      fileName: driveFileName,
+      mimeType,
+      fileSize: item.file.size,
+      guestName: guestName || undefined,
+      isVideo: item.isVideo,
+    });
+  } catch (error) {
+    console.warn('Upload registry failed (upload still succeeded):', error);
+  }
+
+  updateFile(item.id, { status: 'complete', progress: 100, error: undefined });
 }
 
 export function useUploadQueue() {
@@ -79,19 +114,7 @@ export function useUploadQueue() {
       updateFile(item.id, { status: 'uploading', progress: 0, error: undefined });
 
       try {
-        const mimeType = item.file.type || (item.isVideo ? 'video/mp4' : 'image/jpeg');
-        const { sessionUri } = await initUploadSession(
-          item.file.name,
-          mimeType,
-          item.file.size,
-          guestNameRef.current || undefined
-        );
-
-        await uploadFileResumable(item.file, sessionUri, (progress) => {
-          updateFile(item.id, { progress });
-        });
-
-        updateFile(item.id, { status: 'complete', progress: 100, error: undefined });
+        await uploadQueueItem(item, guestNameRef.current, updateFile);
       } catch (err) {
         allSucceeded = false;
         updateFile(item.id, {
@@ -116,19 +139,7 @@ export function useUploadQueue() {
       updateFile(id, { status: 'uploading', progress: 0, error: undefined });
 
       try {
-        const mimeType = item.file.type || (item.isVideo ? 'video/mp4' : 'image/jpeg');
-        const { sessionUri } = await initUploadSession(
-          item.file.name,
-          mimeType,
-          item.file.size,
-          guestNameRef.current || undefined
-        );
-
-        await uploadFileResumable(item.file, sessionUri, (progress) => {
-          updateFile(id, { progress });
-        });
-
-        updateFile(id, { status: 'complete', progress: 100, error: undefined });
+        await uploadQueueItem(item, guestNameRef.current, updateFile);
       } catch (err) {
         updateFile(id, {
           status: 'error',

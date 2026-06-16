@@ -105,3 +105,26 @@ export async function uploadFileResumable(
 
   onProgress(100);
 }
+
+export interface RegisterUploadCompleteInput {
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  guestName?: string;
+  isVideo?: boolean;
+}
+
+export async function registerUploadComplete(
+  input: RegisterUploadCompleteInput
+): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/upload/complete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.message ?? body.error ?? `Registration failed (${response.status})`);
+  }
+}
