@@ -5,6 +5,7 @@ import { getAdminCuratedItems, getAdminUploadItems } from '../../../lib/adminGal
 import { importDriveFolderBatch } from '../../../lib/driveImport.js';
 import {
   deleteCuratedItem,
+  deleteMediaUploadCompletely,
   insertCuratedItem,
   isMediaRegistryConfigured,
   updateMediaUploadTakenAt,
@@ -96,6 +97,27 @@ adminRouter.patch('/uploads', async (req, res) => {
     console.error('Admin update taken date error:', error);
     res.status(400).json({
       error: 'Failed to update taken date',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+adminRouter.delete('/uploads', async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+
+  const id = typeof req.query.id === 'string' ? req.query.id : null;
+  if (!id) {
+    res.status(400).json({ error: 'Missing id query parameter' });
+    return;
+  }
+
+  try {
+    await deleteMediaUploadCompletely(id);
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('Admin delete upload error:', error);
+    res.status(400).json({
+      error: 'Failed to delete upload',
       message: error instanceof Error ? error.message : 'Unknown error',
     });
   }

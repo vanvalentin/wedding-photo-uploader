@@ -683,7 +683,7 @@ video {
 
 /* ─── Admin ─────────────────────────────────────────────────────────────────── */
 .admin-app {
-  max-width: 960px;
+  max-width: 640px;
 }
 
 .admin-login {
@@ -769,8 +769,20 @@ video {
 
 .admin-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-md);
+}
+
+.admin-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+}
+
+.admin-card-actions .admin-primary-button,
+.admin-card-actions .admin-danger-button {
+  margin-top: 0;
 }
 
 .admin-card {
