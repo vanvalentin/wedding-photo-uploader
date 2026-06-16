@@ -3,6 +3,7 @@ import type { MediaPreview } from '../../types';
 import {
   addCuratedItem,
   clearAdminSecret,
+  deleteUpload,
   fetchAdminCurated,
   fetchAdminUploads,
   importDriveFolder,
@@ -37,7 +38,7 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
-  const [previewItem, setPreviewItem] = useState<MediaPreview | null>(null);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [sortField, setSortField] = useState<AdminSortField>('taken');
@@ -85,6 +86,37 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
     () => sortByMediaDate(curated, sortField, sortDirection, 'createdAt'),
     [curated, sortField, sortDirection]
   );
+
+  const previewItems = useMemo((): MediaPreview[] => {
+    if (tab === 'uploads') {
+      return filteredUploads.map((item) => ({
+        id: item.id,
+        previewUrl: item.thumbnailUrl,
+        viewUrl: item.viewUrl,
+        name: item.fileName,
+        isVideo: item.isVideo,
+      }));
+    }
+
+    return sortedCurated.map((item) => ({
+      id: item.id,
+      previewUrl: item.thumbnailUrl,
+      viewUrl: item.viewUrl,
+      name: item.fileName ?? item.caption ?? 'Highlight',
+      isVideo: item.isVideo,
+      caption: item.caption,
+    }));
+  }, [tab, filteredUploads, sortedCurated]);
+
+  useEffect(() => {
+    if (previewIndex !== null && previewIndex >= previewItems.length) {
+      setPreviewIndex(null);
+    }
+  }, [previewItems, previewIndex]);
+
+  useEffect(() => {
+    setPreviewIndex(null);
+  }, [tab, reviewFilter]);
 
   const handleLogout = () => {
     clearAdminSecret();
@@ -167,15 +199,30 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
     }
   };
 
-  const openPreview = (item: { id: string; thumbnailUrl: string; viewUrl: string; fileName: string | null; isVideo: boolean; caption?: string | null }) => {
-    setPreviewItem({
-      id: item.id,
-      previewUrl: item.thumbnailUrl,
-      viewUrl: item.viewUrl,
-      name: item.fileName ?? item.caption ?? 'Media',
-      isVideo: item.isVideo,
-      caption: item.caption,
-    });
+  const handleDeleteUpload = async (item: AdminMediaUploadItem) => {
+    const confirmed = window.confirm(
+      `Delete "${item.fileName}" from Google Drive and remove it from the gallery?\n\nThis moves the file to Drive trash and cannot be undone from here.`
+    );
+    if (!confirmed) return;
+
+    setBusyId(item.id);
+    setActionMessage(null);
+    setError(null);
+
+    try {
+      await deleteUpload(secret, item.id);
+      setActionMessage(`Deleted "${item.fileName}" from Drive`);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete upload');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const openPreview = (id: string) => {
+    const index = previewItems.findIndex((item) => item.id === id);
+    if (index >= 0) setPreviewIndex(index);
   };
 
   return (
@@ -262,7 +309,7 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
                 key={item.id}
                 className={`admin-card${item.reviewed ? ' admin-card-reviewed' : ''}`}
               >
-                <button type="button" className="admin-card-preview" onClick={() => openPreview(item)}>
+                <button type="button" className="admin-card-preview" onClick={() => openPreview(item.id)}>
                   <img src={item.thumbnailUrl} alt={item.fileName} loading="lazy" />
                   {item.isVideo && <span className="video-badge" aria-hidden="true">▶</span>}
                   {item.reviewed && <span className="admin-reviewed-badge">Reviewed</span>}
@@ -278,26 +325,36 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
                     disabled={busyId === item.id}
                     onUpdated={loadData}
                   />
-                  <button
-                    type="button"
-                    className="admin-secondary-button"
-                    disabled={busyId === item.id}
-                    onClick={() => handleToggleReviewed(item)}
-                  >
-                    {busyId === item.id
-                      ? 'Saving…'
-                      : item.reviewed
-                        ? 'Mark unreviewed'
-                        : 'Mark reviewed'}
-                  </button>
-                  <button
-                    type="button"
-                    className="admin-primary-button"
-                    disabled={item.isCurated || busyId === item.id}
-                    onClick={() => handleAddToHighlights(item)}
-                  >
-                    {item.isCurated ? 'In highlights' : busyId === item.id ? 'Adding…' : 'Add to highlights'}
-                  </button>
+                  <div className="admin-card-actions">
+                    <button
+                      type="button"
+                      className="admin-secondary-button"
+                      disabled={busyId === item.id}
+                      onClick={() => handleToggleReviewed(item)}
+                    >
+                      {busyId === item.id
+                        ? 'Saving…'
+                        : item.reviewed
+                          ? 'Mark unreviewed'
+                          : 'Mark reviewed'}
+                    </button>
+                    <button
+                      type="button"
+                      className="admin-primary-button"
+                      disabled={item.isCurated || busyId === item.id}
+                      onClick={() => handleAddToHighlights(item)}
+                    >
+                      {item.isCurated ? 'In highlights' : busyId === item.id ? 'Adding…' : 'Add to highlights'}
+                    </button>
+                    <button
+                      type="button"
+                      className="admin-danger-button"
+                      disabled={busyId === item.id}
+                      onClick={() => handleDeleteUpload(item)}
+                    >
+                      {busyId === item.id ? 'Deleting…' : 'Delete from Drive'}
+                    </button>
+                  </div>
                 </div>
               </article>
             ))
@@ -313,7 +370,7 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
           ) : (
             sortedCurated.map((item) => (
               <article key={item.id} className="admin-card">
-                <button type="button" className="admin-card-preview" onClick={() => openPreview(item)}>
+                <button type="button" className="admin-card-preview" onClick={() => openPreview(item.id)}>
                   <img src={item.thumbnailUrl} alt={item.fileName ?? 'Highlight'} loading="lazy" />
                   {item.isVideo && <span className="video-badge" aria-hidden="true">▶</span>}
                 </button>
@@ -339,7 +396,11 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
         </div>
       )}
 
-      <Lightbox item={previewItem} onClose={() => setPreviewItem(null)} />
+      <Lightbox
+        items={previewItems}
+        activeIndex={previewIndex}
+        onActiveIndexChange={setPreviewIndex}
+      />
     </div>
   );
 }

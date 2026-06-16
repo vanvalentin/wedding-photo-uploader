@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { verifyAdminSecret, isAdminConfigured } from '../../lib/adminAuth.js';
 import { getAdminUploadItems } from '../../lib/adminGallery.js';
 import {
+  deleteMediaUploadCompletely,
   isMediaRegistryConfigured,
   patchMediaUpload,
 } from '../../lib/mediaUploads.js';
@@ -81,6 +82,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  res.setHeader('Allow', 'GET, PATCH');
+  if (req.method === 'DELETE') {
+    const id = typeof req.query.id === 'string' ? req.query.id : null;
+    if (!id) {
+      res.status(400).json({ error: 'Missing id query parameter' });
+      return;
+    }
+
+    try {
+      await deleteMediaUploadCompletely(id);
+      res.status(200).json({ ok: true });
+    } catch (error) {
+      console.error('Admin delete upload error:', error);
+      res.status(400).json({
+        error: 'Failed to delete upload',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+    return;
+  }
+
+  res.setHeader('Allow', 'GET, PATCH, DELETE');
   res.status(405).json({ error: 'Method not allowed' });
 }

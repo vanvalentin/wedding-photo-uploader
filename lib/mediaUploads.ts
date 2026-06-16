@@ -1,5 +1,6 @@
 import { getSupabaseAdmin, isSupabaseAdminConfigured } from './supabase.js';
 import { normalizeTimestamp } from './normalizeTimestamp.js';
+import { deleteDriveFile } from './googleDrive.js';
 
 export interface MediaUploadRow {
   id: string;
@@ -221,6 +222,41 @@ export async function insertCuratedItem(input: {
       throw new Error('This file is already in the curated gallery');
     }
     throw new Error(`Failed to add curated item: ${error.message}`);
+  }
+}
+
+export async function deleteMediaUploadCompletely(id: string): Promise<void> {
+  const supabase = getSupabaseAdmin();
+
+  const { data: row, error: fetchError } = await supabase
+    .from('media_uploads')
+    .select('drive_file_id')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (fetchError) {
+    throw new Error(`Failed to load media upload: ${fetchError.message}`);
+  }
+
+  if (!row) {
+    throw new Error('Media upload not found');
+  }
+
+  await deleteDriveFile(row.drive_file_id);
+
+  const { error: curatedError } = await supabase
+    .from('curated_gallery')
+    .delete()
+    .eq('drive_file_id', row.drive_file_id);
+
+  if (curatedError) {
+    throw new Error(`Failed to remove curated entry: ${curatedError.message}`);
+  }
+
+  const { error } = await supabase.from('media_uploads').delete().eq('id', id);
+
+  if (error) {
+    throw new Error(`Failed to remove media upload: ${error.message}`);
   }
 }
 

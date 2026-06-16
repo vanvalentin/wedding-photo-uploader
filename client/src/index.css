@@ -545,6 +545,34 @@ video {
   background: rgba(255, 255, 255, 0.2);
 }
 
+.lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  transition: background 0.2s;
+  z-index: 2;
+}
+
+.lightbox-nav:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.lightbox-nav-prev {
+  left: var(--space-md);
+}
+
+.lightbox-nav-next {
+  right: var(--space-md);
+}
+
 .lightbox-content {
   display: flex;
   align-items: center;
@@ -568,6 +596,10 @@ video {
   font-size: 0.8125rem;
   text-align: center;
   word-break: break-all;
+}
+
+.lightbox-counter {
+  color: rgba(255, 255, 255, 0.5);
 }
 
 /* ─── Thank you ─────────────────────────────────────────────────────────────── */
@@ -683,7 +715,7 @@ video {
 
 /* ─── Admin ─────────────────────────────────────────────────────────────────── */
 .admin-app {
-  max-width: 960px;
+  max-width: 640px;
 }
 
 .admin-login {
@@ -769,8 +801,20 @@ video {
 
 .admin-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-md);
+}
+
+.admin-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+}
+
+.admin-card-actions .admin-primary-button,
+.admin-card-actions .admin-danger-button {
+  margin-top: 0;
 }
 
 .admin-card {

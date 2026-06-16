@@ -78,6 +78,17 @@ export async function patchUpload(
   }
 }
 
+export async function deleteUpload(secret: string, id: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/admin/uploads?id=${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: adminHeaders(secret),
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseError(response));
+  }
+}
+
 export async function fetchAdminCurated(secret: string): Promise<AdminCuratedItem[]> {
   const response = await fetch(`${API_BASE}/api/admin/curated`, {
     headers: adminHeaders(secret),

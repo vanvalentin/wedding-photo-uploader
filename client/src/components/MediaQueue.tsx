@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { QueuedFile, MediaPreview } from '../types';
 import { useI18n } from '../i18n/I18nContext';
 import { MediaThumbnail } from './MediaThumbnail';
@@ -13,7 +13,18 @@ interface MediaQueueProps {
 
 export function MediaQueue({ queue, onRemove, onRetry, isUploading }: MediaQueueProps) {
   const { t } = useI18n();
-  const [previewItem, setPreviewItem] = useState<MediaPreview | null>(null);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+
+  const previewItems = useMemo<MediaPreview[]>(
+    () =>
+      queue.map((item) => ({
+        id: item.id,
+        previewUrl: item.previewUrl,
+        name: item.file.name,
+        isVideo: item.isVideo,
+      })),
+    [queue]
+  );
 
   if (queue.length === 0) {
     return <p className="queue-empty">{t.queueEmpty}</p>;
@@ -30,21 +41,21 @@ export function MediaQueue({ queue, onRemove, onRetry, isUploading }: MediaQueue
           <MediaThumbnail
             key={item.id}
             item={item}
-            onPreview={(item) =>
-              setPreviewItem({
-                id: item.id,
-                previewUrl: item.previewUrl,
-                name: item.file.name,
-                isVideo: item.isVideo,
-              })
-            }
+            onPreview={(item) => {
+              const index = previewItems.findIndex((entry) => entry.id === item.id);
+              if (index >= 0) setPreviewIndex(index);
+            }}
             onRemove={onRemove}
             onRetry={onRetry}
             disabled={isUploading}
           />
         ))}
       </div>
-      <Lightbox item={previewItem} onClose={() => setPreviewItem(null)} />
+      <Lightbox
+        items={previewItems}
+        activeIndex={previewIndex}
+        onActiveIndexChange={setPreviewIndex}
+      />
     </>
   );
 }
