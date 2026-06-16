@@ -11,7 +11,7 @@ export interface CuratedGalleryRow {
 }
 
 let supabaseClient: SupabaseClient | null = null;
-let supabaseServiceRoleClient: SupabaseClient | null = null;
+let supabaseAdminClient: SupabaseClient | null = null;
 
 function getSupabaseUrl(): string | null {
   return process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? null;
@@ -28,8 +28,13 @@ function getSupabasePublishableKey(): string | null {
   );
 }
 
-function getSupabaseServiceRoleKey(): string | null {
-  return process.env.SUPABASE_SERVICE_ROLE_KEY ?? null;
+/** Supabase secret (server-only) key — replaces legacy service_role JWT */
+function getSupabaseSecretKey(): string | null {
+  return (
+    process.env.SUPABASE_SECRET_KEY ??
+    process.env.SUPABASE_SERVICE_ROLE_KEY ??
+    null
+  );
 }
 
 function getSupabasePublicConfig(): { url: string; key: string } | null {
@@ -41,12 +46,15 @@ function getSupabasePublicConfig(): { url: string; key: string } | null {
 }
 
 export function isSupabaseConfigured(): boolean {
-  return getSupabasePublicConfig() !== null || isSupabaseServiceRoleConfigured();
+  return getSupabasePublicConfig() !== null || isSupabaseAdminConfigured();
 }
 
-export function isSupabaseServiceRoleConfigured(): boolean {
-  return Boolean(getSupabaseUrl() && getSupabaseServiceRoleKey());
+export function isSupabaseAdminConfigured(): boolean {
+  return Boolean(getSupabaseUrl() && getSupabaseSecretKey());
 }
+
+/** @deprecated Prefer isSupabaseAdminConfigured */
+export const isSupabaseServiceRoleConfigured = isSupabaseAdminConfigured;
 
 export function getSupabase(): SupabaseClient {
   const config = getSupabasePublicConfig();
@@ -63,22 +71,25 @@ export function getSupabase(): SupabaseClient {
   return supabaseClient;
 }
 
-export function getSupabaseServiceRole(): SupabaseClient {
+export function getSupabaseAdmin(): SupabaseClient {
   const url = getSupabaseUrl();
-  const key = getSupabaseServiceRoleKey();
+  const key = getSupabaseSecretKey();
 
   if (!url || !key) {
     throw new Error(
-      'Supabase service role is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.'
+      'Supabase secret key is not configured. Set SUPABASE_URL and SUPABASE_SECRET_KEY (or legacy SUPABASE_SERVICE_ROLE_KEY).'
     );
   }
 
-  if (!supabaseServiceRoleClient) {
-    supabaseServiceRoleClient = createClient(url, key);
+  if (!supabaseAdminClient) {
+    supabaseAdminClient = createClient(url, key);
   }
 
-  return supabaseServiceRoleClient;
+  return supabaseAdminClient;
 }
+
+/** @deprecated Prefer getSupabaseAdmin */
+export const getSupabaseServiceRole = getSupabaseAdmin;
 
 export async function fetchCuratedGallery(): Promise<CuratedGalleryRow[]> {
   const supabase = getSupabase();

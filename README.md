@@ -57,11 +57,15 @@ Copy `.env.example` to `.env` in the project root (or set these in Vercel):
 | `VITE_API_URL` | No | Leave **empty** on Vercel |
 | `SUPABASE_URL` | Supabase | Project URL (Settings → API) |
 | `SUPABASE_PUBLISHABLE_KEY` | Supabase | **Publishable** key (public, safe for client) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Server only | **Secret** key — upload registry, admin writes |
+| `SUPABASE_SECRET_KEY` | Server only | **Secret** key (`sb_secret_...`) — upload registry, admin writes |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Optional | Same publishable key if needed client-side |
 | `ADMIN_SECRET` | Admin UI | Password for `/admin` gallery curation |
 
-> **Supabase keys:** In the dashboard under **Project Settings → API**, use the **Publishable** key (`sb_publishable_...`) — not the service role secret. Legacy **anon** JWT keys still work as a fallback (`SUPABASE_ANON_KEY`).
+> **Supabase keys** (Settings → API → **Publishable and secret API keys**):
+> - **Publishable** (`sb_publishable_...`) → `SUPABASE_PUBLISHABLE_KEY` — public, used with RLS
+> - **Secret** (`sb_secret_...`) → `SUPABASE_SECRET_KEY` — server only, never in the browser
+>
+> Legacy **anon** / **service_role** JWT keys still work as fallbacks but Supabase recommends publishable + secret.
 
 \* Use OAuth for **personal Google Drive** (Gmail). This is the recommended setup.
 
@@ -223,8 +227,8 @@ The home screen can show a **Highlights** section — a host-curated grid of fav
 2. Run migrations in `supabase/migrations/` (`curated_gallery` + `media_uploads`).
 3. Add to `.env` / Vercel:
    - `SUPABASE_URL`
-   - `SUPABASE_PUBLISHABLE_KEY` (from **Settings → API → Publishable key**)
-   - `SUPABASE_SERVICE_ROLE_KEY` (secret — server only)
+   - `SUPABASE_PUBLISHABLE_KEY`
+   - `SUPABASE_SECRET_KEY` (server only — never expose client-side)
    - `ADMIN_SECRET` (for `/admin`)
 4. Guest uploads are registered automatically via `POST /api/upload/complete` after each successful Drive upload.
 

@@ -1,6 +1,6 @@
 import { listAllFolderMediaFiles } from './googleDrive.js';
 import { insertMediaUpload, mediaUploadExists } from './mediaUploads.js';
-import { isSupabaseServiceRoleConfigured } from './supabase.js';
+import { isSupabaseAdminConfigured } from './supabase.js';
 
 export interface DriveImportResult {
   totalInDrive: number;
@@ -9,8 +9,8 @@ export interface DriveImportResult {
 }
 
 export async function importDriveFolderToRegistry(): Promise<DriveImportResult> {
-  if (!isSupabaseServiceRoleConfigured()) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for Drive import');
+  if (!isSupabaseAdminConfigured()) {
+    throw new Error('SUPABASE_SECRET_KEY is required for Drive import');
   }
 
   const driveFiles = await listAllFolderMediaFiles();

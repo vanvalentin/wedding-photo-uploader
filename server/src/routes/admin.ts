@@ -25,7 +25,7 @@ function requireAdmin(req: Request, res: Response): boolean {
   if (!isMediaRegistryConfigured()) {
     res.status(503).json({
       error: 'Media registry unavailable',
-      message: 'Set SUPABASE_SERVICE_ROLE_KEY to enable admin features',
+      message: 'Set SUPABASE_SECRET_KEY to enable admin features',
     });
     return false;
   }

@@ -1,4 +1,4 @@
-import { getSupabaseServiceRole, isSupabaseServiceRoleConfigured } from './supabase.js';
+import { getSupabaseAdmin, isSupabaseAdminConfigured } from './supabase.js';
 
 export interface MediaUploadRow {
   id: string;
@@ -23,7 +23,7 @@ export interface InsertMediaUploadInput {
 }
 
 export async function mediaUploadExists(driveFileId: string): Promise<boolean> {
-  const supabase = getSupabaseServiceRole();
+  const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from('media_uploads')
     .select('id')
@@ -38,7 +38,7 @@ export async function mediaUploadExists(driveFileId: string): Promise<boolean> {
 }
 
 export async function insertMediaUpload(input: InsertMediaUploadInput): Promise<MediaUploadRow> {
-  const supabase = getSupabaseServiceRole();
+  const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from('media_uploads')
     .insert({
@@ -61,7 +61,7 @@ export async function insertMediaUpload(input: InsertMediaUploadInput): Promise<
 }
 
 export async function fetchMediaUploads(limit = 200): Promise<MediaUploadRow[]> {
-  const supabase = getSupabaseServiceRole();
+  const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from('media_uploads')
     .select('*')
@@ -82,7 +82,7 @@ export async function insertCuratedItem(input: {
   isVideo?: boolean;
   takenAt?: string | null;
 }): Promise<void> {
-  const supabase = getSupabaseServiceRole();
+  const supabase = getSupabaseAdmin();
   const { error } = await supabase.from('curated_gallery').insert({
     drive_file_id: input.driveFileId,
     caption: input.caption ?? null,
@@ -100,7 +100,7 @@ export async function insertCuratedItem(input: {
 }
 
 export async function deleteCuratedItem(id: string): Promise<void> {
-  const supabase = getSupabaseServiceRole();
+  const supabase = getSupabaseAdmin();
   const { error } = await supabase.from('curated_gallery').delete().eq('id', id);
 
   if (error) {
@@ -112,7 +112,7 @@ export async function updateCuratedItem(
   id: string,
   updates: { caption?: string | null; sortOrder?: number }
 ): Promise<void> {
-  const supabase = getSupabaseServiceRole();
+  const supabase = getSupabaseAdmin();
   const payload: Record<string, unknown> = {};
 
   if ('caption' in updates) payload.caption = updates.caption ?? null;
@@ -126,5 +126,5 @@ export async function updateCuratedItem(
 }
 
 export function isMediaRegistryConfigured(): boolean {
-  return isSupabaseServiceRoleConfigured();
+  return isSupabaseAdminConfigured();
 }
