@@ -17,24 +17,31 @@ function getSupabaseUrl(): string | null {
   return process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? null;
 }
 
-function getSupabaseAnonKey(): string | null {
-  return process.env.SUPABASE_ANON_KEY ?? process.env.VITE_SUPABASE_ANON_KEY ?? null;
+/** Supabase publishable (public) key — safe for client-side use with RLS */
+function getSupabasePublishableKey(): string | null {
+  return (
+    process.env.SUPABASE_PUBLISHABLE_KEY ??
+    process.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
+    process.env.SUPABASE_ANON_KEY ??
+    process.env.VITE_SUPABASE_ANON_KEY ??
+    null
+  );
 }
 
 function getSupabaseServiceRoleKey(): string | null {
   return process.env.SUPABASE_SERVICE_ROLE_KEY ?? null;
 }
 
-function getSupabaseConfig(): { url: string; key: string } | null {
+function getSupabasePublicConfig(): { url: string; key: string } | null {
   const url = getSupabaseUrl();
-  const key = getSupabaseServiceRoleKey() ?? getSupabaseAnonKey();
+  const key = getSupabasePublishableKey();
 
   if (!url || !key) return null;
   return { url, key };
 }
 
 export function isSupabaseConfigured(): boolean {
-  return getSupabaseConfig() !== null;
+  return getSupabasePublicConfig() !== null || isSupabaseServiceRoleConfigured();
 }
 
 export function isSupabaseServiceRoleConfigured(): boolean {
@@ -42,10 +49,10 @@ export function isSupabaseServiceRoleConfigured(): boolean {
 }
 
 export function getSupabase(): SupabaseClient {
-  const config = getSupabaseConfig();
+  const config = getSupabasePublicConfig();
   if (!config) {
     throw new Error(
-      'Supabase is not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY (or VITE_* equivalents).'
+      'Supabase is not configured. Set SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY (or legacy SUPABASE_ANON_KEY).'
     );
   }
 

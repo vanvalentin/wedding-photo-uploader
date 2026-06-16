@@ -55,12 +55,13 @@ Copy `.env.example` to `.env` in the project root (or set these in Vercel):
 | `PORT` | No | Local Express port (default: `3001`) |
 | `CORS_ORIGIN` | No | Local dev CORS (default: `http://localhost:5173`) |
 | `VITE_API_URL` | No | Leave **empty** on Vercel |
-| `SUPABASE_URL` | Curated gallery | Supabase project URL |
-| `SUPABASE_ANON_KEY` | Curated gallery | Supabase anon key (server reads curated rows) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Upload registry + admin | Service role key for writes to Supabase |
-| `VITE_SUPABASE_URL` | Curated gallery | Same URL for client (optional; gallery uses API) |
-| `VITE_SUPABASE_ANON_KEY` | Curated gallery | Same anon key for client (optional) |
+| `SUPABASE_URL` | Supabase | Project URL (Settings → API) |
+| `SUPABASE_PUBLISHABLE_KEY` | Supabase | **Publishable** key (public, safe for client) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server only | **Secret** key — upload registry, admin writes |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Optional | Same publishable key if needed client-side |
 | `ADMIN_SECRET` | Admin UI | Password for `/admin` gallery curation |
+
+> **Supabase keys:** In the dashboard under **Project Settings → API**, use the **Publishable** key (`sb_publishable_...`) — not the service role secret. Legacy **anon** JWT keys still work as a fallback (`SUPABASE_ANON_KEY`).
 
 \* Use OAuth for **personal Google Drive** (Gmail). This is the recommended setup.
 
@@ -83,7 +84,9 @@ Copy `.env.example` to `.env` in the project root (or set these in Vercel):
 1. **APIs & Services → OAuth consent screen**
 2. Choose **External** (or Internal if Workspace)
 3. Fill in app name & support email → **Save**
-4. On **Scopes**, add: `https://www.googleapis.com/auth/drive.file`
+4. On **Scopes**, add:
+   - `https://www.googleapis.com/auth/drive.file` (guest uploads)
+   - `https://www.googleapis.com/auth/drive.readonly` (one-time import of existing folder photos)
 5. On **Test users**, add your Google account (while app is in Testing mode)
 
 ### 4. Create OAuth credentials
@@ -207,9 +210,6 @@ Health check: `GET https://your-project.vercel.app/api/upload/health`
 ### Vercel free tier notes
 
 - Serverless functions are included on the free Hobby plan (sufficient for a wedding weekend)
-- Only the small `/api/upload/init` call hits your server — large file bytes go directly to Google Drive
-- No database or persistent server required
-
 - Only the small `/api/upload/init` and `/api/upload/complete` calls hit your server — large file bytes go directly to Google Drive
 - Supabase is optional but recommended for upload registry, highlights, and admin curation
 
@@ -223,17 +223,43 @@ The home screen can show a **Highlights** section — a host-curated grid of fav
 2. Run migrations in `supabase/migrations/` (`curated_gallery` + `media_uploads`).
 3. Add to `.env` / Vercel:
    - `SUPABASE_URL`
-   - `SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_ROLE_KEY` (required for upload registry + admin writes)
+   - `SUPABASE_PUBLISHABLE_KEY` (from **Settings → API → Publishable key**)
+   - `SUPABASE_SERVICE_ROLE_KEY` (secret — server only)
    - `ADMIN_SECRET` (for `/admin`)
 4. Guest uploads are registered automatically via `POST /api/upload/complete` after each successful Drive upload.
+
+### One-time import (existing Drive photos)
+
+Photos already in your Drive folder **before** deploying the registry are not registered automatically. Import them once:
+
+**Option A — Admin UI (recommended)**
+
+1. Open `/admin` and sign in.
+2. Click **Import from Drive** (top right).
+3. Existing photos/videos in `GOOGLE_DRIVE_FOLDER_ID` appear under **All uploads** — add favourites to **Highlights**.
+
+**Option B — CLI**
+
+```bash
+npm run import-drive
+```
+
+**If import fails with 403 / insufficient permissions**
+
+Your OAuth token may only have `drive.file`. Re-authorize with read access:
+
+1. In Google Cloud Console → OAuth consent screen → Scopes, add `drive.readonly`.
+2. Revoke the app at [Google Account permissions](https://myaccount.google.com/permissions).
+3. Run `npm run get-refresh-token` and update `GOOGLE_OAUTH_REFRESH_TOKEN` in Vercel / `.env`.
+
+Safe to run import multiple times — already-registered files are skipped.
 
 ### Admin UI (`/admin`)
 
 1. Open `/admin` on your deployed site (or `http://localhost:5173/admin` in dev).
 2. Sign in with your `ADMIN_SECRET`.
-3. **All uploads** — every registered guest upload, newest first. Click **Add to highlights** to feature one.
-4. **Highlights** — current curated gallery shown to guests. Click **Remove** to un-feature.
+3. **All uploads** — registered photos/videos. Use **Import from Drive** for pre-existing folder files.
+4. **Highlights** — curated gallery shown to guests. Click **Remove** to un-feature.
 
 You can still insert rows manually in Supabase if needed, but the admin UI is the recommended workflow.
 
@@ -272,7 +298,8 @@ The Express server runs via `tsx` and serves the built React app from `client/di
 │   │   └── health.ts       # GET — health check
 │   ├── admin/
 │   │   ├── uploads.ts      # GET — list registered uploads (admin)
-│   │   └── curated.ts      # GET/POST/DELETE — manage highlights (admin)
+│   │   ├── curated.ts      # GET/POST/DELETE — manage highlights (admin)
+│   │   └── import-drive.ts # POST — one-time import from Drive folder
 │   ├── gallery/
 │   │   └── curated.ts      # GET — curated highlights from Supabase
 │   └── media/
@@ -282,6 +309,7 @@ The Express server runs via `tsx` and serves the built React app from `client/di
 │   ├── adminAuth.ts
 │   ├── adminGallery.ts
 │   ├── config.ts
+│   ├── driveImport.ts
 │   ├── gallery.ts
 │   ├── googleDrive.ts
 │   ├── mediaUploads.ts

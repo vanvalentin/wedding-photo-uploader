@@ -11,7 +11,8 @@
     "build:all": "npm run build --prefix client && npm run build --prefix server",
     "start": "npm run start --prefix server",
     "install:all": "npm install --prefix server && npm install --prefix client",
-    "get-refresh-token": "node scripts/get-refresh-token.mjs"
+    "get-refresh-token": "node scripts/get-refresh-token.mjs",
+    "import-drive": "tsx scripts/import-drive.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.8",
@@ -22,6 +23,7 @@
   "devDependencies": {
     "@vercel/node": "^5.3.0",
     "concurrently": "^9.1.2",
+    "tsx": "^4.19.3",
     "vercel": "^42.1.0"
   }
 }

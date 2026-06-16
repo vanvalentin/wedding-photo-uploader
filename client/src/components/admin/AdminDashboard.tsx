@@ -5,6 +5,7 @@ import {
   clearAdminSecret,
   fetchAdminCurated,
   fetchAdminUploads,
+  importDriveFolder,
   removeCuratedItem,
   type AdminCuratedItem,
   type AdminMediaUploadItem,
@@ -32,6 +33,7 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [previewItem, setPreviewItem] = useState<MediaPreview | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -95,6 +97,24 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
     }
   };
 
+  const handleImportFromDrive = async () => {
+    setImporting(true);
+    setActionMessage(null);
+    setError(null);
+
+    try {
+      const result = await importDriveFolder(secret);
+      setActionMessage(
+        `Imported ${result.imported} new file(s) from Drive (${result.skipped} already registered, ${result.totalInDrive} total in folder).`
+      );
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to import from Drive');
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const openPreview = (item: { id: string; thumbnailUrl: string; viewUrl: string; fileName: string | null; isVideo: boolean; caption?: string | null }) => {
     setPreviewItem({
       id: item.id,
@@ -114,6 +134,14 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
           <p>Curate highlights shown to guests on the upload page</p>
         </div>
         <div className="admin-header-actions">
+          <button
+            type="button"
+            className="admin-secondary-button"
+            onClick={handleImportFromDrive}
+            disabled={loading || importing}
+          >
+            {importing ? 'Importing…' : 'Import from Drive'}
+          </button>
           <button type="button" className="admin-secondary-button" onClick={loadData} disabled={loading}>
             Refresh
           </button>
@@ -149,9 +177,15 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
       {loading && <p className="admin-loading">Loading…</p>}
 
       {!loading && tab === 'uploads' && (
-        <div className="admin-grid">
+        <>
+          <p className="admin-import-hint">
+            Existing photos already in your Drive folder? Click <strong>Import from Drive</strong> once to register them here.
+          </p>
+          <div className="admin-grid">
           {uploads.length === 0 ? (
-            <p className="admin-empty">No uploads registered yet. Guest uploads appear here after a successful upload.</p>
+            <p className="admin-empty">
+              No uploads registered yet. Use Import from Drive for existing folder photos, or wait for new guest uploads.
+            </p>
           ) : (
             uploads.map((item) => (
               <article key={item.id} className="admin-card">
@@ -176,6 +210,7 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
             ))
           )}
         </div>
+        </>
       )}
 
       {!loading && tab === 'curated' && (

@@ -106,6 +106,25 @@ export async function removeCuratedItem(secret: string, id: string): Promise<voi
   }
 }
 
+export interface DriveImportResult {
+  totalInDrive: number;
+  imported: number;
+  skipped: number;
+}
+
+export async function importDriveFolder(secret: string): Promise<DriveImportResult> {
+  const response = await fetch(`${API_BASE}/api/admin/import-drive`, {
+    method: 'POST',
+    headers: adminHeaders(secret),
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseError(response));
+  }
+
+  return response.json();
+}
+
 export function getStoredAdminSecret(): string | null {
   return sessionStorage.getItem(ADMIN_SECRET_STORAGE_KEY);
 }

@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import { verifyAdminSecret, isAdminConfigured } from '../../../lib/adminAuth.js';
 import { getAdminCuratedItems, getAdminUploadItems } from '../../../lib/adminGallery.js';
+import { importDriveFolderToRegistry } from '../../../lib/driveImport.js';
 import {
   deleteCuratedItem,
   insertCuratedItem,
@@ -116,6 +117,21 @@ adminRouter.delete('/curated', async (req, res) => {
     console.error('Admin curated delete error:', error);
     res.status(500).json({
       error: 'Failed to remove curated item',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+adminRouter.post('/import-drive', async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+
+  try {
+    const result = await importDriveFolderToRegistry();
+    res.json(result);
+  } catch (error) {
+    console.error('Drive import error:', error);
+    res.status(500).json({
+      error: 'Failed to import from Drive',
       message: error instanceof Error ? error.message : 'Unknown error',
     });
   }
