@@ -15,6 +15,8 @@ Guests can optionally identify themselves, preview their media in a queue, and u
 - **Lightbox** — full-screen preview on thumbnail tap
 - **Per-file progress bars** — animated progress as chunks upload
 - **Exit guard** — browser warning if leaving during active or unsent uploads
+- **Upload success summary** — photo/video counts and a thumbnail grid with load-more
+- **Curated highlights gallery** — host-picked favourites from Google Drive via Supabase (optional)
 
 ## Architecture
 
@@ -51,6 +53,10 @@ Copy `.env.example` to `.env` in the project root (or set these in Vercel):
 | `PORT` | No | Local Express port (default: `3001`) |
 | `CORS_ORIGIN` | No | Local dev CORS (default: `http://localhost:5173`) |
 | `VITE_API_URL` | No | Leave **empty** on Vercel |
+| `SUPABASE_URL` | Curated gallery | Supabase project URL |
+| `SUPABASE_ANON_KEY` | Curated gallery | Supabase anon key (server reads curated rows) |
+| `VITE_SUPABASE_URL` | Curated gallery | Same URL for client (optional; gallery uses API) |
+| `VITE_SUPABASE_ANON_KEY` | Curated gallery | Same anon key for client (optional) |
 
 \* Use OAuth for **personal Google Drive** (Gmail). This is the recommended setup.
 
@@ -200,6 +206,31 @@ Health check: `GET https://your-project.vercel.app/api/upload/health`
 - Only the small `/api/upload/init` call hits your server — large file bytes go directly to Google Drive
 - No database or persistent server required
 
+- No database required for uploads (Supabase is optional, for curated gallery only)
+
+## Curated Highlights Gallery (optional)
+
+The home screen can show a **Highlights** section — a host-curated grid of favourite photos/videos from Google Drive, powered by Supabase.
+
+### Setup
+
+1. Create a Supabase project (or use an existing one).
+2. Run the migration in `supabase/migrations/20250616000000_create_curated_gallery.sql`.
+3. Add `SUPABASE_URL` and `SUPABASE_ANON_KEY` to your `.env` / Vercel env vars.
+4. In the Supabase dashboard, insert rows into `curated_gallery`:
+
+| Column | Description |
+|---|---|
+| `drive_file_id` | Google Drive file ID (from the file URL or folder listing) |
+| `caption` | Optional caption shown in the lightbox |
+| `sort_order` | Lower numbers appear first |
+| `is_video` | `true` for videos |
+| `taken_at` | Optional capture date for sorting |
+
+Thumbnails and full-size previews are proxied through `/api/media/thumbnail` and `/api/media/view` using your Google OAuth credentials.
+
+If Supabase is not configured or the table is empty, the Highlights section is hidden automatically.
+
 ## Production Build (self-hosted alternative)
 
 ```bash
@@ -213,12 +244,19 @@ The Express server runs via `tsx` and serves the built React app from `client/di
 
 ```
 ├── api/                    # Vercel serverless functions
-│   └── upload/
-│       ├── init.ts         # POST — start resumable upload session
-│       └── health.ts       # GET — health check
+│   ├── upload/
+│   │   ├── init.ts         # POST — start resumable upload session
+│   │   └── health.ts       # GET — health check
+│   ├── gallery/
+│   │   └── curated.ts      # GET — curated highlights from Supabase
+│   └── media/
+│       ├── thumbnail.ts    # GET — proxy Drive thumbnail
+│       └── view.ts         # GET — proxy full media for lightbox
 ├── lib/                    # Shared backend logic (Vercel + Express)
 │   ├── config.ts
+│   ├── gallery.ts
 │   ├── googleDrive.ts
+│   ├── supabase.ts
 │   └── uploadInit.ts
 ├── client/                 # Vite + React frontend
 │   └── src/

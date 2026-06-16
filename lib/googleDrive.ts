@@ -127,3 +127,81 @@ export async function createResumableUploadSession(
 
   return { sessionUri, fileName };
 }
+
+export interface DriveFileMetadata {
+  id: string;
+  name: string;
+  mimeType: string;
+  thumbnailLink?: string;
+  createdTime?: string;
+  imageMediaMetadata?: {
+    time?: string;
+    width?: number;
+    height?: number;
+  };
+  videoMediaMetadata?: {
+    width?: number;
+    height?: number;
+    durationMillis?: string;
+  };
+}
+
+export async function getDriveFileMetadata(fileId: string): Promise<DriveFileMetadata> {
+  const accessToken = await getAccessToken();
+  const fields = [
+    'id',
+    'name',
+    'mimeType',
+    'thumbnailLink',
+    'createdTime',
+    'imageMediaMetadata',
+    'videoMediaMetadata',
+  ].join(',');
+
+  const response = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?fields=${fields}&supportsAllDrives=true`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }
+  );
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Failed to fetch Drive file metadata (${response.status}): ${errorBody}`);
+  }
+
+  return response.json() as Promise<DriveFileMetadata>;
+}
+
+export async function fetchDriveThumbnail(fileId: string): Promise<Response> {
+  const accessToken = await getAccessToken();
+  const metadata = await getDriveFileMetadata(fileId);
+
+  if (metadata.thumbnailLink) {
+    const thumbnailResponse = await fetch(metadata.thumbnailLink, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (thumbnailResponse.ok) {
+      return thumbnailResponse;
+    }
+  }
+
+  if (metadata.mimeType.startsWith('image/')) {
+    return fetch(
+      `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+  }
+
+  throw new Error('No thumbnail available for this file');
+}
+
+export async function fetchDriveMedia(fileId: string): Promise<Response> {
+  const accessToken = await getAccessToken();
+
+  return fetch(
+    `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+}

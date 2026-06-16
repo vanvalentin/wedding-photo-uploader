@@ -1,5 +1,29 @@
 export type UploadStatus = 'pending' | 'uploading' | 'complete' | 'error';
 
+export interface MediaPreview {
+  id: string;
+  previewUrl: string;
+  viewUrl?: string;
+  name: string;
+  isVideo: boolean;
+  caption?: string | null;
+}
+
+export interface CuratedGalleryItem {
+  id: string;
+  driveFileId: string;
+  caption: string | null;
+  sortOrder: number;
+  isVideo: boolean;
+  takenAt: string | null;
+  name: string;
+  thumbnailUrl: string;
+  viewUrl: string;
+}
+
+/** Number of thumbnails shown before "Load more" on the success screen */
+export const SUCCESS_GALLERY_PAGE_SIZE = 12;
+
 export interface QueuedFile {
   id: string;
   file: File;
