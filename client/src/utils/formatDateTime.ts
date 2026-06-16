@@ -50,6 +50,16 @@ export function toParisDateTimeLocalInput(value: string | null | undefined): str
 
 export type AdminSortField = 'taken' | 'uploaded';
 export type AdminSortDirection = 'desc' | 'asc';
+export type AdminReviewFilter = 'all' | 'unreviewed' | 'reviewed';
+
+export function filterByReviewStatus<T extends { reviewed: boolean }>(
+  items: T[],
+  filter: AdminReviewFilter
+): T[] {
+  if (filter === 'reviewed') return items.filter((item) => item.reviewed);
+  if (filter === 'unreviewed') return items.filter((item) => !item.reviewed);
+  return items;
+}
 
 export function sortByMediaDate<T extends { takenAt: string | null }>(
   items: T[],

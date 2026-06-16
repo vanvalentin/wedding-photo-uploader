@@ -8,7 +8,7 @@ import {
   deleteMediaUploadCompletely,
   insertCuratedItem,
   isMediaRegistryConfigured,
-  updateMediaUploadTakenAt,
+  patchMediaUpload,
 } from '../../../lib/mediaUploads.js';
 
 export const adminRouter = Router();
@@ -73,15 +73,20 @@ const addCuratedSchema = z.object({
   takenAt: z.string().datetime().optional(),
 });
 
-const updateTakenAtSchema = z.object({
-  id: z.string().uuid(),
-  takenAt: z.union([z.string().min(1), z.null()]),
-});
+const patchUploadSchema = z
+  .object({
+    id: z.string().uuid(),
+    takenAt: z.union([z.string().min(1), z.null()]).optional(),
+    reviewed: z.boolean().optional(),
+  })
+  .refine((data) => data.takenAt !== undefined || data.reviewed !== undefined, {
+    message: 'Provide takenAt and/or reviewed',
+  });
 
 adminRouter.patch('/uploads', async (req, res) => {
   if (!requireAdmin(req, res)) return;
 
-  const parsed = updateTakenAtSchema.safeParse(req.body);
+  const parsed = patchUploadSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({
       error: 'Invalid request',
@@ -91,12 +96,15 @@ adminRouter.patch('/uploads', async (req, res) => {
   }
 
   try {
-    await updateMediaUploadTakenAt(parsed.data.id, parsed.data.takenAt);
+    await patchMediaUpload(parsed.data.id, {
+      takenAt: parsed.data.takenAt,
+      reviewed: parsed.data.reviewed,
+    });
     res.json({ ok: true });
   } catch (error) {
-    console.error('Admin update taken date error:', error);
+    console.error('Admin patch upload error:', error);
     res.status(400).json({
-      error: 'Failed to update taken date',
+      error: 'Failed to update upload',
       message: error instanceof Error ? error.message : 'Unknown error',
     });
   }

@@ -14,6 +14,7 @@ export interface AdminMediaUploadItem {
   thumbnailUrl: string;
   viewUrl: string;
   isCurated: boolean;
+  reviewed: boolean;
 }
 
 export interface AdminCuratedItem {
@@ -61,15 +62,15 @@ export async function fetchAdminUploads(secret: string): Promise<AdminMediaUploa
   return body.items;
 }
 
-export async function updateUploadTakenAt(
+export async function patchUpload(
   secret: string,
   id: string,
-  takenAt: string | null
+  updates: { takenAt?: string | null; reviewed?: boolean }
 ): Promise<void> {
   const response = await fetch(`${API_BASE}/api/admin/uploads`, {
     method: 'PATCH',
     headers: adminHeaders(secret),
-    body: JSON.stringify({ id, takenAt }),
+    body: JSON.stringify({ id, ...updates }),
   });
 
   if (!response.ok) {
