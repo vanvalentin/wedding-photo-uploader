@@ -13,7 +13,7 @@ const addCuratedSchema = z.object({
   caption: z.string().max(500).optional(),
   sortOrder: z.number().int().min(0).max(10000).optional(),
   isVideo: z.boolean().optional(),
-  takenAt: z.string().datetime().optional(),
+  takenAt: z.union([z.string().min(1), z.null()]).optional(),
 });
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
