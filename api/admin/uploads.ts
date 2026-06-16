@@ -6,6 +6,7 @@ import {
   deleteMediaUploadCompletely,
   isMediaRegistryConfigured,
   patchMediaUpload,
+  patchMediaUploadsBulk,
 } from '../../lib/mediaUploads.js';
 
 const patchUploadSchema = z
@@ -17,6 +18,11 @@ const patchUploadSchema = z
   .refine((data) => data.takenAt !== undefined || data.reviewed !== undefined, {
     message: 'Provide takenAt and/or reviewed',
   });
+
+const bulkPatchUploadSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(200),
+  takenAt: z.union([z.string().min(1), z.null()]),
+});
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
@@ -57,6 +63,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (req.method === 'PATCH') {
+    const bulkParsed = bulkPatchUploadSchema.safeParse(req.body);
+    if (bulkParsed.success) {
+      try {
+        const updated = await patchMediaUploadsBulk(bulkParsed.data.ids, {
+          takenAt: bulkParsed.data.takenAt,
+        });
+        res.status(200).json({ ok: true, updated });
+      } catch (error) {
+        console.error('Admin bulk patch upload error:', error);
+        res.status(400).json({
+          error: 'Failed to update uploads',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+      return;
+    }
+
     const parsed = patchUploadSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({

@@ -825,6 +825,85 @@ video {
   box-shadow: 0 2px 8px var(--color-shadow);
 }
 
+.admin-card-preview-wrap {
+  position: relative;
+}
+
+.admin-card-select {
+  position: absolute;
+  top: var(--space-sm);
+  right: var(--space-sm);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+}
+
+.admin-card-select input {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  cursor: pointer;
+}
+
+.admin-card-selected {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.admin-bulk-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.admin-bulk-bar-selection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.admin-bulk-bar-count {
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.admin-bulk-bar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-sm);
+}
+
+.admin-bulk-date-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.admin-bulk-bar-actions .admin-primary-button,
+.admin-bulk-bar-actions .admin-secondary-button {
+  margin-top: 0;
+}
+
+.admin-bulk-error {
+  margin: 0;
+}
+
 .admin-card-preview {
   display: block;
   width: 100%;

@@ -15,6 +15,7 @@ import {
 import { Lightbox } from '../Lightbox';
 import { AdminSortBar } from './AdminSortBar';
 import { AdminTakenDateEditor } from './AdminTakenDateEditor';
+import { AdminBulkDateBar } from './AdminBulkDateBar';
 import {
   filterByReviewStatus,
   formatMediaDateLabel,
@@ -44,6 +45,7 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
   const [sortField, setSortField] = useState<AdminSortField>('taken');
   const [sortDirection, setSortDirection] = useState<AdminSortDirection>('desc');
   const [reviewFilter, setReviewFilter] = useState<AdminReviewFilter>('unreviewed');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -116,6 +118,7 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
 
   useEffect(() => {
     setPreviewIndex(null);
+    setSelectedIds(new Set());
   }, [tab, reviewFilter]);
 
   const handleLogout = () => {
@@ -137,7 +140,7 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
       setActionMessage(`Added "${item.fileName}" to highlights`);
       await loadData();
     } catch (err) {
-      setActionMessage(err instanceof Error ? err.message : 'Failed to add highlight');
+      setError(err instanceof Error ? err.message : 'Failed to add highlight');
     } finally {
       setBusyId(null);
     }
@@ -225,6 +228,23 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
     if (index >= 0) setPreviewIndex(index);
   };
 
+  const toggleSelected = (id: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAllVisible = () => {
+    setSelectedIds(new Set(filteredUploads.map((item) => item.id)));
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
   return (
     <div className="admin-dashboard">
       <header className="admin-header">
@@ -294,6 +314,15 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
           <p className="admin-import-hint">
             Existing photos already in your Drive folder? Click <strong>Import from Drive</strong> once to register them here.
           </p>
+          <AdminBulkDateBar
+            secret={secret}
+            selectedIds={[...selectedIds]}
+            visibleCount={filteredUploads.length}
+            onSelectAllVisible={selectAllVisible}
+            onClearSelection={clearSelection}
+            onUpdated={loadData}
+            disabled={loading || importing}
+          />
           <div className="admin-grid">
           {filteredUploads.length === 0 ? (
             <p className="admin-empty">
@@ -307,13 +336,23 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
             filteredUploads.map((item) => (
               <article
                 key={item.id}
-                className={`admin-card${item.reviewed ? ' admin-card-reviewed' : ''}`}
+                className={`admin-card${item.reviewed ? ' admin-card-reviewed' : ''}${selectedIds.has(item.id) ? ' admin-card-selected' : ''}`}
               >
-                <button type="button" className="admin-card-preview" onClick={() => openPreview(item.id)}>
-                  <img src={item.thumbnailUrl} alt={item.fileName} loading="lazy" />
-                  {item.isVideo && <span className="video-badge" aria-hidden="true">▶</span>}
-                  {item.reviewed && <span className="admin-reviewed-badge">Reviewed</span>}
-                </button>
+                <div className="admin-card-preview-wrap">
+                  <label className="admin-card-select">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(item.id)}
+                      onChange={() => toggleSelected(item.id)}
+                      aria-label={`Select ${item.fileName}`}
+                    />
+                  </label>
+                  <button type="button" className="admin-card-preview" onClick={() => openPreview(item.id)}>
+                    <img src={item.thumbnailUrl} alt={item.fileName} loading="lazy" />
+                    {item.isVideo && <span className="video-badge" aria-hidden="true">▶</span>}
+                    {item.reviewed && <span className="admin-reviewed-badge">Reviewed</span>}
+                  </button>
+                </div>
                 <div className="admin-card-body">
                   <p className="admin-card-title">{item.fileName}</p>
                   {item.guestName && <p className="admin-card-meta">By {item.guestName}</p>}

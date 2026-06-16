@@ -9,6 +9,7 @@ import {
   insertCuratedItem,
   isMediaRegistryConfigured,
   patchMediaUpload,
+  patchMediaUploadsBulk,
 } from '../../../lib/mediaUploads.js';
 
 export const adminRouter = Router();
@@ -70,7 +71,7 @@ const addCuratedSchema = z.object({
   caption: z.string().max(500).optional(),
   sortOrder: z.number().int().min(0).max(10000).optional(),
   isVideo: z.boolean().optional(),
-  takenAt: z.string().datetime().optional(),
+  takenAt: z.union([z.string().min(1), z.null()]).optional(),
 });
 
 const patchUploadSchema = z
@@ -83,8 +84,30 @@ const patchUploadSchema = z
     message: 'Provide takenAt and/or reviewed',
   });
 
+const bulkPatchUploadSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(200),
+  takenAt: z.union([z.string().min(1), z.null()]),
+});
+
 adminRouter.patch('/uploads', async (req, res) => {
   if (!requireAdmin(req, res)) return;
+
+  const bulkParsed = bulkPatchUploadSchema.safeParse(req.body);
+  if (bulkParsed.success) {
+    try {
+      const updated = await patchMediaUploadsBulk(bulkParsed.data.ids, {
+        takenAt: bulkParsed.data.takenAt,
+      });
+      res.json({ ok: true, updated });
+    } catch (error) {
+      console.error('Admin bulk patch upload error:', error);
+      res.status(400).json({
+        error: 'Failed to update uploads',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+    return;
+  }
 
   const parsed = patchUploadSchema.safeParse(req.body);
   if (!parsed.success) {

@@ -78,6 +78,25 @@ export async function patchUpload(
   }
 }
 
+export async function patchUploadsBulk(
+  secret: string,
+  ids: string[],
+  takenAt: string | null
+): Promise<number> {
+  const response = await fetch(`${API_BASE}/api/admin/uploads`, {
+    method: 'PATCH',
+    headers: adminHeaders(secret),
+    body: JSON.stringify({ ids, takenAt }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseError(response));
+  }
+
+  const body = (await response.json()) as { updated: number };
+  return body.updated;
+}
+
 export async function deleteUpload(secret: string, id: string): Promise<void> {
   const response = await fetch(`${API_BASE}/api/admin/uploads?id=${encodeURIComponent(id)}`, {
     method: 'DELETE',

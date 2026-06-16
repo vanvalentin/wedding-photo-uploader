@@ -186,6 +186,53 @@ export async function patchMediaUpload(
   }
 }
 
+export async function patchMediaUploadsBulk(
+  ids: string[],
+  updates: { takenAt: string | null }
+): Promise<number> {
+  if (ids.length === 0) return 0;
+
+  const supabase = getSupabaseAdmin();
+  const normalized = updates.takenAt === null ? null : normalizeTimestamp(updates.takenAt);
+
+  const { data: rows, error: fetchError } = await supabase
+    .from('media_uploads')
+    .select('id, drive_file_id')
+    .in('id', ids);
+
+  if (fetchError) {
+    throw new Error(`Failed to load media uploads: ${fetchError.message}`);
+  }
+
+  const foundIds = (rows ?? []).map((row) => row.id);
+  if (foundIds.length === 0) {
+    throw new Error('No matching uploads found');
+  }
+
+  const { error } = await supabase
+    .from('media_uploads')
+    .update({ taken_at: normalized })
+    .in('id', foundIds);
+
+  if (error) {
+    throw new Error(`Failed to update media uploads: ${error.message}`);
+  }
+
+  const driveFileIds = [...new Set((rows ?? []).map((row) => row.drive_file_id))];
+  if (driveFileIds.length > 0) {
+    const { error: curatedError } = await supabase
+      .from('curated_gallery')
+      .update({ taken_at: normalized })
+      .in('drive_file_id', driveFileIds);
+
+    if (curatedError) {
+      throw new Error(`Failed to sync curated taken dates: ${curatedError.message}`);
+    }
+  }
+
+  return foundIds.length;
+}
+
 export async function fetchMediaUploads(limit = 200): Promise<MediaUploadRow[]> {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
