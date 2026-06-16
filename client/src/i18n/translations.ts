@@ -18,6 +18,8 @@ export interface Translations {
   uploadFailed: string;
   retry: string;
   close: string;
+  previousImage: string;
+  nextImage: string;
   beforeUnload: string;
   fileTooLarge: string;
   invalidFileType: string;
@@ -61,6 +63,8 @@ export const translations: Record<Locale, Translations> = {
     uploadFailed: 'Upload failed',
     retry: 'Retry',
     close: 'Close',
+    previousImage: 'Previous image',
+    nextImage: 'Next image',
     beforeUnload: 'You have uploads in progress or unsent files. Are you sure you want to leave?',
     fileTooLarge: 'File is too large (max 5 GB)',
     invalidFileType: 'Only photos and videos are supported',
@@ -102,6 +106,8 @@ export const translations: Record<Locale, Translations> = {
     uploadFailed: 'Échec du téléversement',
     retry: 'Réessayer',
     close: 'Fermer',
+    previousImage: 'Image précédente',
+    nextImage: 'Image suivante',
     beforeUnload:
       'Des téléversements sont en cours ou des fichiers ne sont pas encore envoyés. Voulez-vous vraiment quitter ?',
     fileTooLarge: 'Fichier trop volumineux (max 5 Go)',
@@ -144,6 +150,8 @@ export const translations: Record<Locale, Translations> = {
     uploadFailed: '上載失敗',
     retry: '重試',
     close: '關閉',
+    previousImage: '上一張',
+    nextImage: '下一張',
     beforeUnload: '您有正在上載或尚未送出的檔案。確定要離開嗎？',
     fileTooLarge: '檔案太大（上限 5 GB）',
     invalidFileType: '只支援相片和影片',

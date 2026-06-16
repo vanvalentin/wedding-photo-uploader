@@ -35,7 +35,7 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
-  const [previewItem, setPreviewItem] = useState<MediaPreview | null>(null);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [sortField, setSortField] = useState<AdminSortField>('taken');
@@ -72,6 +72,37 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
     () => sortByMediaDate(curated, sortField, sortDirection, 'createdAt'),
     [curated, sortField, sortDirection]
   );
+
+  const previewItems = useMemo((): MediaPreview[] => {
+    if (tab === 'uploads') {
+      return sortedUploads.map((item) => ({
+        id: item.id,
+        previewUrl: item.thumbnailUrl,
+        viewUrl: item.viewUrl,
+        name: item.fileName,
+        isVideo: item.isVideo,
+      }));
+    }
+
+    return sortedCurated.map((item) => ({
+      id: item.id,
+      previewUrl: item.thumbnailUrl,
+      viewUrl: item.viewUrl,
+      name: item.fileName ?? item.caption ?? 'Highlight',
+      isVideo: item.isVideo,
+      caption: item.caption,
+    }));
+  }, [tab, sortedUploads, sortedCurated]);
+
+  useEffect(() => {
+    if (previewIndex !== null && previewIndex >= previewItems.length) {
+      setPreviewIndex(null);
+    }
+  }, [previewItems, previewIndex]);
+
+  useEffect(() => {
+    setPreviewIndex(null);
+  }, [tab]);
 
   const handleLogout = () => {
     clearAdminSecret();
@@ -156,15 +187,9 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
     }
   };
 
-  const openPreview = (item: { id: string; thumbnailUrl: string; viewUrl: string; fileName: string | null; isVideo: boolean; caption?: string | null }) => {
-    setPreviewItem({
-      id: item.id,
-      previewUrl: item.thumbnailUrl,
-      viewUrl: item.viewUrl,
-      name: item.fileName ?? item.caption ?? 'Media',
-      isVideo: item.isVideo,
-      caption: item.caption,
-    });
+  const openPreview = (id: string) => {
+    const index = previewItems.findIndex((item) => item.id === id);
+    if (index >= 0) setPreviewIndex(index);
   };
 
   return (
@@ -240,7 +265,7 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
           ) : (
             sortedUploads.map((item) => (
               <article key={item.id} className="admin-card">
-                <button type="button" className="admin-card-preview" onClick={() => openPreview(item)}>
+                <button type="button" className="admin-card-preview" onClick={() => openPreview(item.id)}>
                   <img src={item.thumbnailUrl} alt={item.fileName} loading="lazy" />
                   {item.isVideo && <span className="video-badge" aria-hidden="true">▶</span>}
                 </button>
@@ -288,7 +313,7 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
           ) : (
             sortedCurated.map((item) => (
               <article key={item.id} className="admin-card">
-                <button type="button" className="admin-card-preview" onClick={() => openPreview(item)}>
+                <button type="button" className="admin-card-preview" onClick={() => openPreview(item.id)}>
                   <img src={item.thumbnailUrl} alt={item.fileName ?? 'Highlight'} loading="lazy" />
                   {item.isVideo && <span className="video-badge" aria-hidden="true">▶</span>}
                 </button>
@@ -314,7 +339,11 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
         </div>
       )}
 
-      <Lightbox item={previewItem} onClose={() => setPreviewItem(null)} />
+      <Lightbox
+        items={previewItems}
+        activeIndex={previewIndex}
+        onActiveIndexChange={setPreviewIndex}
+      />
     </div>
   );
 }

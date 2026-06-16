@@ -12,10 +12,15 @@ interface MediaPreviewGridProps {
 export function MediaPreviewGrid({ items, pageSize, showLoadMore = true }: MediaPreviewGridProps) {
   const { t } = useI18n();
   const [visibleCount, setVisibleCount] = useState(pageSize);
-  const [previewItem, setPreviewItem] = useState<MediaPreview | null>(null);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
 
   const visibleItems = items.slice(0, visibleCount);
   const hasMore = showLoadMore && visibleCount < items.length;
+
+  const openPreview = (item: MediaPreview) => {
+    const index = items.findIndex((entry) => entry.id === item.id);
+    if (index >= 0) setPreviewIndex(index);
+  };
 
   return (
     <>
@@ -25,7 +30,7 @@ export function MediaPreviewGrid({ items, pageSize, showLoadMore = true }: Media
             <button
               type="button"
               className="thumbnail-preview"
-              onClick={() => setPreviewItem(item)}
+              onClick={() => openPreview(item)}
               aria-label={item.name}
             >
               {item.isVideo && item.previewUrl.startsWith('blob:') ? (
@@ -59,7 +64,11 @@ export function MediaPreviewGrid({ items, pageSize, showLoadMore = true }: Media
         </button>
       )}
 
-      <Lightbox item={previewItem} onClose={() => setPreviewItem(null)} />
+      <Lightbox
+        items={items}
+        activeIndex={previewIndex}
+        onActiveIndexChange={setPreviewIndex}
+      />
     </>
   );
 }
