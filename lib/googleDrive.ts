@@ -1,19 +1,13 @@
-import { JWT, OAuth2Client } from 'google-auth-library';
+import { JWT } from 'google-auth-library';
 import { config } from './config.js';
 
-/** Minimal scope: create files in folders the authorized user owns */
 const DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
-/** Read-only scope: list and read existing files in the upload folder (one-time import) */
 const DRIVE_READONLY_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
 const DRIVE_SCOPES = [DRIVE_FILE_SCOPE, DRIVE_READONLY_SCOPE];
 
 let jwtClient: JWT | null = null;
-let oauth2Client: OAuth2Client | null = null;
 
 function getJwtClient(): JWT {
-  if (!config.googleServiceAccount) {
-    throw new Error('Service account credentials are not configured');
-  }
   if (!jwtClient) {
     jwtClient = new JWT({
       email: config.googleServiceAccount.clientEmail,
@@ -24,27 +18,8 @@ function getJwtClient(): JWT {
   return jwtClient;
 }
 
-function getOAuth2Client(): OAuth2Client {
-  if (!config.googleOAuth) {
-    throw new Error('OAuth credentials are not configured');
-  }
-  if (!oauth2Client) {
-    oauth2Client = new OAuth2Client(
-      config.googleOAuth.clientId,
-      config.googleOAuth.clientSecret
-    );
-    oauth2Client.setCredentials({
-      refresh_token: config.googleOAuth.refreshToken,
-    });
-  }
-  return oauth2Client;
-}
-
 export async function getAccessToken(): Promise<string> {
-  const client =
-    config.googleAuthMode === 'oauth' ? getOAuth2Client() : getJwtClient();
-
-  const { token } = await client.getAccessToken();
+  const { token } = await getJwtClient().getAccessToken();
   if (!token) {
     throw new Error('Failed to obtain Google access token');
   }
@@ -71,9 +46,9 @@ function parseDriveError(errorBody: string): string | null {
     const reason = parsed.error?.errors?.[0]?.reason;
     if (reason === 'storageQuotaExceeded') {
       return (
-        'Service accounts cannot store files on personal Google Drive (no storage quota). ' +
-        'Use OAuth credentials instead (recommended) — see README. ' +
-        'Service accounts only work with Google Workspace Shared Drives.'
+        'Upload failed: target folder must be in a Google Workspace Shared Drive. ' +
+        'Service accounts cannot store files on personal My Drive. ' +
+        'Add the service account as Content manager on the Shared Drive — see README.'
       );
     }
     return parsed.error?.message ?? null;

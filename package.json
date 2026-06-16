@@ -11,7 +11,6 @@
     "build:all": "npm run build --prefix client && npm run build --prefix server",
     "start": "npm run start --prefix server",
     "install:all": "npm install --prefix server && npm install --prefix client",
-    "get-refresh-token": "node scripts/get-refresh-token.mjs",
     "import-drive": "tsx scripts/import-drive.ts"
   },
   "dependencies": {
