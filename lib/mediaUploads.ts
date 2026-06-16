@@ -1,4 +1,5 @@
 import { getSupabaseAdmin, isSupabaseAdminConfigured } from './supabase.js';
+import { normalizeTimestamp } from './normalizeTimestamp.js';
 
 export interface MediaUploadRow {
   id: string;
@@ -48,7 +49,7 @@ export async function insertMediaUpload(input: InsertMediaUploadInput): Promise<
       mime_type: input.mimeType ?? null,
       is_video: input.isVideo,
       file_size: input.fileSize ?? null,
-      taken_at: input.takenAt ?? null,
+      taken_at: normalizeTimestamp(input.takenAt),
     })
     .select('*')
     .single();
@@ -88,7 +89,7 @@ export async function insertCuratedItem(input: {
     caption: input.caption ?? null,
     sort_order: input.sortOrder ?? 0,
     is_video: input.isVideo ?? false,
-    taken_at: input.takenAt ?? null,
+    taken_at: normalizeTimestamp(input.takenAt),
   });
 
   if (error) {
