@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { I18nProvider } from './i18n/I18nContext';
 import { useUploadQueue } from './hooks/useUploadQueue';
 import { useBeforeUnloadGuard } from './hooks/useBeforeUnload';
 import { Header } from './components/Header';
@@ -80,9 +79,5 @@ function AppContent() {
 }
 
 export default function App() {
-  return (
-    <I18nProvider>
-      <AppContent />
-    </I18nProvider>
-  );
+  return <AppContent />;
 }
