@@ -103,9 +103,13 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
     setError(null);
 
     try {
-      const result = await importDriveFolder(secret);
+      const result = await importDriveFolder(secret, (totals) => {
+        setActionMessage(
+          `Importing… ${totals.processed} file(s) processed (${totals.imported} new, ${totals.skipped} already registered)`
+        );
+      });
       setActionMessage(
-        `Imported ${result.imported} new file(s) from Drive (${result.skipped} already registered, ${result.totalInDrive} total in folder).`
+        `Imported ${result.imported} new file(s) from Drive (${result.skipped} already registered, ${result.processed} total in folder).`
       );
       await loadData();
     } catch (err) {

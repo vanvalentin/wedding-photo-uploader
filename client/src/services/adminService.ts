@@ -106,23 +106,49 @@ export async function removeCuratedItem(secret: string, id: string): Promise<voi
   }
 }
 
-export interface DriveImportResult {
-  totalInDrive: number;
+export interface DriveImportBatchResult {
   imported: number;
   skipped: number;
+  processedInBatch: number;
+  nextPageToken: string | null;
+  done: boolean;
 }
 
-export async function importDriveFolder(secret: string): Promise<DriveImportResult> {
-  const response = await fetch(`${API_BASE}/api/admin/import-drive`, {
-    method: 'POST',
-    headers: adminHeaders(secret),
-  });
+export interface DriveImportResult {
+  imported: number;
+  skipped: number;
+  processed: number;
+}
 
-  if (!response.ok) {
-    throw new Error(await parseError(response));
-  }
+export async function importDriveFolder(
+  secret: string,
+  onProgress?: (totals: DriveImportResult) => void
+): Promise<DriveImportResult> {
+  let pageToken: string | undefined;
+  const totals: DriveImportResult = { imported: 0, skipped: 0, processed: 0 };
 
-  return response.json();
+  do {
+    const response = await fetch(`${API_BASE}/api/admin/import-drive`, {
+      method: 'POST',
+      headers: adminHeaders(secret),
+      body: JSON.stringify(pageToken ? { pageToken } : {}),
+    });
+
+    if (!response.ok) {
+      throw new Error(await parseError(response));
+    }
+
+    const batch = (await response.json()) as DriveImportBatchResult;
+    totals.imported += batch.imported;
+    totals.skipped += batch.skipped;
+    totals.processed += batch.processedInBatch;
+    onProgress?.({ ...totals });
+
+    if (batch.done) break;
+    pageToken = batch.nextPageToken ?? undefined;
+  } while (pageToken);
+
+  return totals;
 }
 
 export function getStoredAdminSecret(): string | null {
