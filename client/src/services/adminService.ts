@@ -61,6 +61,22 @@ export async function fetchAdminUploads(secret: string): Promise<AdminMediaUploa
   return body.items;
 }
 
+export async function updateUploadTakenAt(
+  secret: string,
+  id: string,
+  takenAt: string | null
+): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/admin/uploads`, {
+    method: 'PATCH',
+    headers: adminHeaders(secret),
+    body: JSON.stringify({ id, takenAt }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseError(response));
+  }
+}
+
 export async function fetchAdminCurated(secret: string): Promise<AdminCuratedItem[]> {
   const response = await fetch(`${API_BASE}/api/admin/curated`, {
     headers: adminHeaders(secret),

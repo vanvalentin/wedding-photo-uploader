@@ -1,17 +1,20 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { z } from 'zod';
 import { verifyAdminSecret, isAdminConfigured } from '../../lib/adminAuth.js';
 import { getAdminUploadItems } from '../../lib/adminGallery.js';
-import { isMediaRegistryConfigured } from '../../lib/mediaUploads.js';
+import {
+  isMediaRegistryConfigured,
+  updateMediaUploadTakenAt,
+} from '../../lib/mediaUploads.js';
+
+const updateTakenAtSchema = z.object({
+  id: z.string().uuid(),
+  takenAt: z.union([z.string().min(1), z.null()]),
+});
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
     res.status(204).end();
-    return;
-  }
-
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', 'GET');
-    res.status(405).json({ error: 'Method not allowed' });
     return;
   }
 
@@ -33,14 +36,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  try {
-    const items = await getAdminUploadItems();
-    res.status(200).json({ items });
-  } catch (error) {
-    console.error('Admin uploads error:', error);
-    res.status(500).json({
-      error: 'Failed to load uploads',
-      message: error instanceof Error ? error.message : 'Unknown error',
-    });
+  if (req.method === 'GET') {
+    try {
+      const items = await getAdminUploadItems();
+      res.status(200).json({ items });
+    } catch (error) {
+      console.error('Admin uploads error:', error);
+      res.status(500).json({
+        error: 'Failed to load uploads',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+    return;
   }
+
+  if (req.method === 'PATCH') {
+    const parsed = updateTakenAtSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        error: 'Invalid request',
+        details: parsed.error.flatten().fieldErrors,
+      });
+      return;
+    }
+
+    try {
+      await updateMediaUploadTakenAt(parsed.data.id, parsed.data.takenAt);
+      res.status(200).json({ ok: true });
+    } catch (error) {
+      console.error('Admin update taken date error:', error);
+      res.status(400).json({
+        error: 'Failed to update taken date',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+    return;
+  }
+
+  res.setHeader('Allow', 'GET, PATCH');
+  res.status(405).json({ error: 'Method not allowed' });
 }
