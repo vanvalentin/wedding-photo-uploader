@@ -30,6 +30,16 @@ export interface Translations {
   uploadMore: string;
   thankYou: string;
   thankYouSubtitle: string;
+  uploadSummaryOnePhoto: string;
+  uploadSummaryPhotos: string;
+  uploadSummaryOneVideo: string;
+  uploadSummaryVideos: string;
+  uploadSummaryAnd: string;
+  yourUploadedMemories: string;
+  loadMore: string;
+  curatedGalleryTitle: string;
+  curatedGallerySubtitle: string;
+  curatedGalleryLoading: string;
 }
 
 export const translations: Record<Locale, Translations> = {
@@ -63,6 +73,16 @@ export const translations: Record<Locale, Translations> = {
     uploadMore: 'Upload more',
     thankYou: 'Thank you!',
     thankYouSubtitle: 'Your memories have been shared with us.',
+    uploadSummaryOnePhoto: '1 photo',
+    uploadSummaryPhotos: '{count} photos',
+    uploadSummaryOneVideo: '1 video',
+    uploadSummaryVideos: '{count} videos',
+    uploadSummaryAnd: 'and',
+    yourUploadedMemories: 'What you shared',
+    loadMore: 'Load more',
+    curatedGalleryTitle: 'Highlights',
+    curatedGallerySubtitle: 'A few of our favourite moments so far',
+    curatedGalleryLoading: 'Loading highlights…',
   },
   fr: {
     title: 'Partagez vos souvenirs',
@@ -95,6 +115,16 @@ export const translations: Record<Locale, Translations> = {
     uploadMore: 'Téléverser d\'autres fichiers',
     thankYou: 'Merci !',
     thankYouSubtitle: 'Vos souvenirs nous ont été partagés.',
+    uploadSummaryOnePhoto: '1 photo',
+    uploadSummaryPhotos: '{count} photos',
+    uploadSummaryOneVideo: '1 vidéo',
+    uploadSummaryVideos: '{count} vidéos',
+    uploadSummaryAnd: 'et',
+    yourUploadedMemories: 'Ce que vous avez partagé',
+    loadMore: 'Voir plus',
+    curatedGalleryTitle: 'Temps forts',
+    curatedGallerySubtitle: 'Quelques-uns de nos moments préférés',
+    curatedGalleryLoading: 'Chargement des temps forts…',
   },
   'zh-HK': {
     title: '分享您的回憶',
@@ -126,5 +156,15 @@ export const translations: Record<Locale, Translations> = {
     uploadMore: '上載更多',
     thankYou: '多謝您！',
     thankYouSubtitle: '您的回憶已與我們分享。',
+    uploadSummaryOnePhoto: '1 張相片',
+    uploadSummaryPhotos: '{count} 張相片',
+    uploadSummaryOneVideo: '1 段影片',
+    uploadSummaryVideos: '{count} 段影片',
+    uploadSummaryAnd: '及',
+    yourUploadedMemories: '您分享的內容',
+    loadMore: '載入更多',
+    curatedGalleryTitle: '精選回憶',
+    curatedGallerySubtitle: '我們至目前為止最喜愛的一些時刻',
+    curatedGalleryLoading: '正在載入精選回憶…',
   },
 };

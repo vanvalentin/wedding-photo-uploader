@@ -1,9 +1,9 @@
 import { useEffect, useCallback } from 'react';
-import type { QueuedFile } from '../types';
+import type { MediaPreview } from '../types';
 import { useI18n } from '../i18n/I18nContext';
 
 interface LightboxProps {
-  item: QueuedFile | null;
+  item: MediaPreview | null;
   onClose: () => void;
 }
 
@@ -29,8 +29,14 @@ export function Lightbox({ item, onClose }: LightboxProps) {
 
   if (!item) return null;
 
+  const viewUrl =
+    item.viewUrl ??
+    (item.previewUrl.includes('/api/media/thumbnail')
+      ? item.previewUrl.replace('/api/media/thumbnail', '/api/media/view')
+      : item.previewUrl);
+
   return (
-    <div className="lightbox" role="dialog" aria-modal="true" aria-label={item.file.name}>
+    <div className="lightbox" role="dialog" aria-modal="true" aria-label={item.name}>
       <button type="button" className="lightbox-close" onClick={onClose} aria-label={t.close}>
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -39,17 +45,19 @@ export function Lightbox({ item, onClose }: LightboxProps) {
       <div className="lightbox-content" onClick={onClose}>
         {item.isVideo ? (
           <video
-            src={item.previewUrl}
+            src={viewUrl}
             controls
             autoPlay
             playsInline
             onClick={(e) => e.stopPropagation()}
           />
         ) : (
-          <img src={item.previewUrl} alt={item.file.name} onClick={(e) => e.stopPropagation()} />
+          <img src={viewUrl} alt={item.name} onClick={(e) => e.stopPropagation()} />
         )}
       </div>
-      <p className="lightbox-filename">{item.file.name}</p>
+      <p className="lightbox-filename">
+        {item.caption ? item.caption : item.name}
+      </p>
     </div>
   );
 }

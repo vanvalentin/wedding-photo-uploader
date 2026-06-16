@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { I18nProvider, useI18n } from './i18n/I18nContext';
+import { I18nProvider } from './i18n/I18nContext';
 import { useUploadQueue } from './hooks/useUploadQueue';
 import { useBeforeUnloadGuard } from './hooks/useBeforeUnload';
 import { Header } from './components/Header';
@@ -7,9 +7,10 @@ import { GuestNameInput } from './components/GuestNameInput';
 import { UploadZone } from './components/UploadZone';
 import { MediaQueue } from './components/MediaQueue';
 import { UploadButton } from './components/UploadButton';
+import { ThankYouScreen } from './components/ThankYouScreen';
+import { CuratedGallery } from './components/CuratedGallery';
 
 function AppContent() {
-  const { t } = useI18n();
   const [guestName, setGuestNameLocal] = useState('');
   const {
     queue,
@@ -32,37 +33,27 @@ function AppContent() {
   };
 
   const pendingCount = queue.filter((f) => f.status === 'pending' || f.status === 'error').length;
+  const completedItems = queue.filter((f) => f.status === 'complete');
+  const showThankYou = allComplete && queue.length > 0 && queue.every((f) => f.status === 'complete');
 
   return (
     <div className="app">
       <Header />
 
       <main className="main">
-        {allComplete && queue.every((f) => f.status === 'complete') ? (
-          <section className="thank-you" aria-live="polite">
-            <div className="thank-you-icon" aria-hidden="true">♥</div>
-            <h2>{t.thankYou}</h2>
-            <p>{t.thankYouSubtitle}</p>
-            <button
-              type="button"
-              className="upload-button thank-you-button"
-              onClick={resetForMoreUploads}
-            >
-              {t.uploadMore}
-            </button>
-          </section>
+        {showThankYou ? (
+          <ThankYouScreen completedItems={completedItems} onUploadMore={resetForMoreUploads} />
         ) : (
           <>
+            <CuratedGallery />
+
             <GuestNameInput
               value={guestName}
               onChange={handleGuestNameChange}
               disabled={isUploading}
             />
 
-            <UploadZone
-              onFilesSelected={addFiles}
-              disabled={isUploading}
-            />
+            <UploadZone onFilesSelected={addFiles} disabled={isUploading} />
 
             <MediaQueue
               queue={queue}

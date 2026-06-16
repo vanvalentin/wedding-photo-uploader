@@ -10,6 +10,7 @@ import express from 'express';
 import cors from 'cors';
 import { config } from './config.js';
 import { uploadRouter } from './routes/upload.js';
+import { galleryRouter, mediaRouter } from './routes/gallery.js';
 
 const app = express();
 
@@ -22,6 +23,8 @@ app.use(
 app.use(express.json({ limit: '1mb' }));
 
 app.use('/api/upload', uploadRouter);
+app.use('/api/gallery', galleryRouter);
+app.use('/api/media', mediaRouter);
 
 // Serve built client in production
 if (config.nodeEnv === 'production') {
