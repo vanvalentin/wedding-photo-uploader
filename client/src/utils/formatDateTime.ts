@@ -12,3 +12,14 @@ export function formatParisDateTime(value: string | null | undefined): string {
     timeStyle: 'short',
   });
 }
+
+/** Prefer photo taken time (EXIF); fall back to upload/registry time. */
+export function formatMediaDateLabel(
+  takenAt: string | null | undefined,
+  fallbackAt: string
+): string {
+  if (takenAt) {
+    return `Prise le ${formatParisDateTime(takenAt)}`;
+  }
+  return `Importée le ${formatParisDateTime(fallbackAt)}`;
+}

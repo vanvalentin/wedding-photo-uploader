@@ -2,6 +2,7 @@ import { listFolderMediaFiles, type FolderMediaFile } from './googleDrive.js';
 import {
   getRegisteredDriveFileIds,
   insertMediaUploadsBatch,
+  updateTakenAtBatch,
   type InsertMediaUploadInput,
 } from './mediaUploads.js';
 import { isSupabaseAdminConfigured } from './supabase.js';
@@ -55,6 +56,14 @@ export async function importDriveFolderBatch(
   const registeredIds = await getRegisteredDriveFileIds(files.map((file) => file.id));
   const toInsert = files.filter((file) => !registeredIds.has(file.id)).map(toInsertInput);
   const imported = await insertMediaUploadsBatch(toInsert);
+
+  const toRefreshTakenAt = files
+    .filter((file) => registeredIds.has(file.id))
+    .map((file) => ({
+      driveFileId: file.id,
+      takenAt: file.imageMediaMetadata?.time ?? file.createdTime ?? null,
+    }));
+  await updateTakenAtBatch(toRefreshTakenAt);
 
   return {
     imported,
