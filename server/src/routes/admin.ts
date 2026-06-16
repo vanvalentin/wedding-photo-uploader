@@ -2,7 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import { verifyAdminSecret, isAdminConfigured } from '../../../lib/adminAuth.js';
 import { getAdminCuratedItems, getAdminUploadItems } from '../../../lib/adminGallery.js';
-import { importDriveFolderToRegistry } from '../../../lib/driveImport.js';
+import { importDriveFolderBatch } from '../../../lib/driveImport.js';
 import {
   deleteCuratedItem,
   insertCuratedItem,
@@ -125,8 +125,11 @@ adminRouter.delete('/curated', async (req, res) => {
 adminRouter.post('/import-drive', async (req, res) => {
   if (!requireAdmin(req, res)) return;
 
+  const pageToken =
+    typeof req.body?.pageToken === 'string' ? req.body.pageToken : undefined;
+
   try {
-    const result = await importDriveFolderToRegistry();
+    const result = await importDriveFolderBatch(pageToken);
     res.json(result);
   } catch (error) {
     console.error('Drive import error:', error);

@@ -38,6 +38,45 @@ export async function mediaUploadExists(driveFileId: string): Promise<boolean> {
   return Boolean(data);
 }
 
+export async function getRegisteredDriveFileIds(driveFileIds: string[]): Promise<Set<string>> {
+  if (driveFileIds.length === 0) return new Set();
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from('media_uploads')
+    .select('drive_file_id')
+    .in('drive_file_id', driveFileIds);
+
+  if (error) {
+    throw new Error(`Failed to check media uploads: ${error.message}`);
+  }
+
+  return new Set((data ?? []).map((row) => row.drive_file_id));
+}
+
+export async function insertMediaUploadsBatch(inputs: InsertMediaUploadInput[]): Promise<number> {
+  if (inputs.length === 0) return 0;
+
+  const supabase = getSupabaseAdmin();
+  const rows = inputs.map((input) => ({
+    drive_file_id: input.driveFileId,
+    file_name: input.fileName,
+    guest_name: input.guestName ?? null,
+    mime_type: input.mimeType ?? null,
+    is_video: input.isVideo,
+    file_size: input.fileSize ?? null,
+    taken_at: normalizeTimestamp(input.takenAt),
+  }));
+
+  const { data, error } = await supabase.from('media_uploads').insert(rows).select('id');
+
+  if (error) {
+    throw new Error(`Failed to insert media uploads: ${error.message}`);
+  }
+
+  return data?.length ?? 0;
+}
+
 export async function insertMediaUpload(input: InsertMediaUploadInput): Promise<MediaUploadRow> {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
