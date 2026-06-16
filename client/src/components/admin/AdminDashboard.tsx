@@ -11,7 +11,7 @@ import {
   type AdminMediaUploadItem,
 } from '../../services/adminService';
 import { Lightbox } from '../Lightbox';
-import { formatParisDateTime } from '../../utils/formatDateTime';
+import { formatMediaDateLabel } from '../../utils/formatDateTime';
 
 interface AdminDashboardProps {
   secret: string;
@@ -196,7 +196,9 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
                 <div className="admin-card-body">
                   <p className="admin-card-title">{item.fileName}</p>
                   {item.guestName && <p className="admin-card-meta">By {item.guestName}</p>}
-                  <p className="admin-card-meta">{formatParisDateTime(item.uploadedAt)}</p>
+                  <p className="admin-card-meta">
+                    {formatMediaDateLabel(item.takenAt, item.uploadedAt)}
+                  </p>
                   <button
                     type="button"
                     className="admin-primary-button"
@@ -227,6 +229,9 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
                 <div className="admin-card-body">
                   <p className="admin-card-title">{item.fileName ?? item.driveFileId}</p>
                   {item.caption && <p className="admin-card-meta">{item.caption}</p>}
+                  <p className="admin-card-meta">
+                    {formatMediaDateLabel(item.takenAt, item.createdAt)}
+                  </p>
                   <p className="admin-card-meta">Order {item.sortOrder}</p>
                   <button
                     type="button"

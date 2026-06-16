@@ -77,6 +77,37 @@ export async function insertMediaUploadsBatch(inputs: InsertMediaUploadInput[]):
   return data?.length ?? 0;
 }
 
+export async function updateTakenAtBatch(
+  updates: Array<{ driveFileId: string; takenAt: string | null }>
+): Promise<number> {
+  const rows = updates
+    .map((row) => ({
+      driveFileId: row.driveFileId,
+      takenAt: normalizeTimestamp(row.takenAt),
+    }))
+    .filter((row): row is { driveFileId: string; takenAt: string } => Boolean(row.takenAt));
+
+  if (rows.length === 0) return 0;
+
+  const supabase = getSupabaseAdmin();
+  let updated = 0;
+
+  for (const row of rows) {
+    const { error } = await supabase
+      .from('media_uploads')
+      .update({ taken_at: row.takenAt })
+      .eq('drive_file_id', row.driveFileId);
+
+    if (error) {
+      throw new Error(`Failed to update taken_at: ${error.message}`);
+    }
+
+    updated += 1;
+  }
+
+  return updated;
+}
+
 export async function insertMediaUpload(input: InsertMediaUploadInput): Promise<MediaUploadRow> {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
