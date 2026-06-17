@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import type { MediaPreview } from '../types';
 import { Lightbox } from './Lightbox';
 
@@ -10,7 +10,6 @@ interface HighlightsCarouselProps {
 
 export function HighlightsCarousel({ items }: HighlightsCarouselProps) {
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
-  const loopItems = useMemo(() => [...items, ...items], [items]);
 
   const openPreview = (id: string) => {
     const index = items.findIndex((item) => item.id === id);
@@ -19,23 +18,17 @@ export function HighlightsCarousel({ items }: HighlightsCarouselProps) {
 
   if (items.length === 0) return null;
 
-  const durationSeconds = Math.max(items.length * 4, 24);
-
   return (
     <>
-      <div
-        className="highlights-carousel"
-        style={{ ['--carousel-duration' as string]: `${durationSeconds}s` }}
-      >
-        <div className="highlights-carousel-track" aria-hidden={items.length === 0}>
-          {loopItems.map((item, index) => (
+      <div className="highlights-carousel">
+        <div className="highlights-carousel-track">
+          {items.map((item) => (
             <button
-              key={`${item.id}-${index}`}
+              key={item.id}
               type="button"
               className="highlights-carousel-slide"
               onClick={() => openPreview(item.id)}
               aria-label={item.name}
-              tabIndex={index < items.length ? 0 : -1}
             >
               {item.isVideo ? (
                 <>
