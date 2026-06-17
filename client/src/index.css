@@ -739,15 +739,22 @@ video {
 }
 
 .highlights-carousel {
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   margin-inline: calc(-1 * var(--space-md));
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
   mask-image: linear-gradient(
     to right,
     transparent,
-    black 8%,
-    black 92%,
+    black 2%,
+    black 98%,
     transparent
   );
+}
+
+.highlights-carousel::-webkit-scrollbar {
+  display: none;
 }
 
 .highlights-carousel-track {
@@ -755,12 +762,6 @@ video {
   width: max-content;
   gap: var(--space-sm);
   padding-inline: var(--space-md);
-  animation: highlights-carousel-scroll var(--carousel-duration, 48s) linear infinite;
-}
-
-.highlights-carousel:hover .highlights-carousel-track,
-.highlights-carousel:focus-within .highlights-carousel-track {
-  animation-play-state: paused;
 }
 
 .highlights-carousel-slide {
@@ -805,24 +806,6 @@ video {
 
 .highlights-page-title {
   font-size: clamp(1.75rem, 5vw, 2.25rem);
-}
-
-@keyframes highlights-carousel-scroll {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .highlights-carousel-track {
-    animation: none;
-    flex-wrap: wrap;
-    width: auto;
-    justify-content: center;
-  }
 }
 
 /* ─── Admin ─────────────────────────────────────────────────────────────────── */
