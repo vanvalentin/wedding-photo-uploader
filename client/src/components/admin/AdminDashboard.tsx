@@ -36,7 +36,8 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
   const [tab, setTab] = useState<AdminTab>('uploads');
   const [uploads, setUploads] = useState<AdminMediaUploadItem[]>([]);
   const [curated, setCurated] = useState<AdminCuratedItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
@@ -47,8 +48,14 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
   const [reviewFilter, setReviewFilter] = useState<AdminReviewFilter>('unreviewed');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const loadData = useCallback(async (options?: { background?: boolean }) => {
+    const background = options?.background ?? false;
+
+    if (background) {
+      setRefreshing(true);
+    } else {
+      setInitialLoading(true);
+    }
     setError(null);
 
     try {
@@ -61,9 +68,15 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load admin data');
     } finally {
-      setLoading(false);
+      if (background) {
+        setRefreshing(false);
+      } else {
+        setInitialLoading(false);
+      }
     }
   }, [secret]);
+
+  const refreshData = useCallback(() => loadData({ background: true }), [loadData]);
 
   useEffect(() => {
     loadData();
@@ -129,16 +142,29 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
   const handleAddToHighlights = async (item: AdminMediaUploadItem) => {
     setBusyId(item.id);
     setActionMessage(null);
+    setError(null);
 
     try {
-      await addCuratedItem(secret, {
-        driveFileId: item.driveFileId,
-        isVideo: item.isVideo,
-        takenAt: item.takenAt,
-        sortOrder: curated.length,
-      });
+      await Promise.all([
+        addCuratedItem(secret, {
+          driveFileId: item.driveFileId,
+          isVideo: item.isVideo,
+          takenAt: item.takenAt,
+          sortOrder: curated.length,
+        }),
+        item.reviewed
+          ? Promise.resolve()
+          : patchUpload(secret, item.id, { reviewed: true }),
+      ]);
+      setUploads((current) =>
+        current.map((upload) =>
+          upload.id === item.id
+            ? { ...upload, isCurated: true, reviewed: true }
+            : upload
+        )
+      );
       setActionMessage(`Added "${item.fileName}" to highlights`);
-      await loadData();
+      await refreshData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add highlight');
     } finally {
@@ -153,7 +179,7 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
     try {
       await removeCuratedItem(secret, item.id);
       setActionMessage('Removed from highlights');
-      await loadData();
+      await refreshData();
     } catch (err) {
       setActionMessage(err instanceof Error ? err.message : 'Failed to remove highlight');
     } finally {
@@ -194,7 +220,7 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
       setActionMessage(
         `Imported ${result.imported} new file(s) from Drive (${result.skipped} already registered, ${result.processed} total in folder).`
       );
-      await loadData();
+      await refreshData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to import from Drive');
     } finally {
@@ -215,7 +241,7 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
     try {
       await deleteUpload(secret, item.id);
       setActionMessage(`Deleted "${item.fileName}" from Drive`);
-      await loadData();
+      await refreshData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete upload');
     } finally {
@@ -257,12 +283,17 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
             type="button"
             className="admin-secondary-button"
             onClick={handleImportFromDrive}
-            disabled={loading || importing}
+            disabled={initialLoading || importing}
           >
             {importing ? 'Importing…' : 'Import from Drive'}
           </button>
-          <button type="button" className="admin-secondary-button" onClick={loadData} disabled={loading}>
-            Refresh
+          <button
+            type="button"
+            className="admin-secondary-button"
+            onClick={() => loadData({ background: true })}
+            disabled={initialLoading || refreshing}
+          >
+            {refreshing ? 'Refreshing…' : 'Refresh'}
           </button>
           <button type="button" className="admin-secondary-button" onClick={handleLogout}>
             Sign out
@@ -292,7 +323,7 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
         </button>
       </div>
 
-      {!loading && (
+      {!initialLoading && (
         <AdminSortBar
           sortField={sortField}
           sortDirection={sortDirection}
@@ -307,9 +338,9 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
 
       {actionMessage && <p className="admin-message">{actionMessage}</p>}
       {error && <p className="admin-error">{error}</p>}
-      {loading && <p className="admin-loading">Loading…</p>}
+      {initialLoading && <p className="admin-loading">Loading…</p>}
 
-      {!loading && tab === 'uploads' && (
+      {!initialLoading && tab === 'uploads' && (
         <>
           <p className="admin-import-hint">
             Existing photos already in your Drive folder? Click <strong>Import from Drive</strong> once to register them here.
@@ -320,8 +351,8 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
             visibleCount={filteredUploads.length}
             onSelectAllVisible={selectAllVisible}
             onClearSelection={clearSelection}
-            onUpdated={loadData}
-            disabled={loading || importing}
+            onUpdated={refreshData}
+            disabled={initialLoading || importing}
           />
           <div className="admin-grid">
           {filteredUploads.length === 0 ? (
@@ -362,7 +393,7 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
                     uploadedAt={item.uploadedAt}
                     secret={secret}
                     disabled={busyId === item.id}
-                    onUpdated={loadData}
+                    onUpdated={refreshData}
                   />
                   <div className="admin-card-actions">
                     <button
@@ -402,7 +433,7 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
         </>
       )}
 
-      {!loading && tab === 'curated' && (
+      {!initialLoading && tab === 'curated' && (
         <div className="admin-grid">
           {sortedCurated.length === 0 ? (
             <p className="admin-empty">No highlights yet. Add uploads from the All uploads tab.</p>
