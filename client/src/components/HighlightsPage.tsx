@@ -4,7 +4,6 @@ import { useI18n } from '../i18n/I18nContext';
 import { useCuratedGallery } from '../hooks/useCuratedGallery';
 import { LanguageToggle } from './LanguageToggle';
 import { MediaPreviewGrid } from './MediaPreviewGrid';
-import { AllMediaGallerySection } from './AllMediaGallerySection';
 
 const HIGHLIGHTS_PAGE_SIZE = 12;
 
@@ -41,23 +40,24 @@ export function HighlightsPage() {
       </header>
 
       <main className="main">
-        <section className="highlights-section">
-          {loading && <p className="curated-gallery-loading">{t.curatedGalleryLoading}</p>}
-          {error && <p className="admin-error">{error}</p>}
-          {!loading && !error && previewItems.length === 0 && (
-            <p className="curated-gallery-loading">{t.curatedGalleryEmpty}</p>
-          )}
-          {!loading && previewItems.length > 0 && (
-            <MediaPreviewGrid
-              items={previewItems}
-              pageSize={HIGHLIGHTS_PAGE_SIZE}
-              showLoadMore={false}
-              loadMoreOnScroll
-            />
-          )}
-        </section>
-
-        <AllMediaGallerySection />
+        {loading && <p className="curated-gallery-loading">{t.curatedGalleryLoading}</p>}
+        {error && <p className="admin-error">{error}</p>}
+        {!loading && !error && previewItems.length === 0 && (
+          <p className="curated-gallery-loading">{t.curatedGalleryEmpty}</p>
+        )}
+        {!loading && previewItems.length > 0 && (
+          <MediaPreviewGrid
+            items={previewItems}
+            pageSize={HIGHLIGHTS_PAGE_SIZE}
+            showLoadMore={false}
+            loadMoreOnScroll
+          />
+        )}
+        <div className="gallery-page-links">
+          <a href="/gallery" className="curated-see-more">
+            {t.viewAllMedia}
+          </a>
+        </div>
       </main>
 
       <footer className="footer">
