@@ -40,7 +40,7 @@ function DownloadIcon() {
 export function Lightbox({ items, activeIndex, onActiveIndexChange }: LightboxProps) {
   const { t } = useI18n();
   const touchStartX = useRef<number | null>(null);
-  const [fullLoaded, setFullLoaded] = useState(false);
+  const [mediaReady, setMediaReady] = useState(false);
 
   const item = activeIndex !== null ? items[activeIndex] ?? null : null;
   const hasPrevious = activeIndex !== null && activeIndex > 0;
@@ -80,29 +80,14 @@ export function Lightbox({ items, activeIndex, onActiveIndexChange }: LightboxPr
   }, [activeIndex, handleKeyDown]);
 
   useEffect(() => {
-    setFullLoaded(false);
+    setMediaReady(false);
   }, [item?.id]);
-
-  useEffect(() => {
-    if (activeIndex === null) return;
-
-    for (const offset of [-1, 1]) {
-      const neighbor = items[activeIndex + offset];
-      if (!neighbor || neighbor.isVideo) continue;
-
-      const url = resolveViewUrl(neighbor);
-      if (url.startsWith('blob:')) continue;
-
-      const img = new Image();
-      img.src = url;
-    }
-  }, [activeIndex, items]);
 
   if (!item || activeIndex === null) return null;
 
   const viewUrl = resolveViewUrl(item);
   const downloadUrl = resolveDownloadUrl(item);
-  const showImageProgressive = !item.isVideo && !viewUrl.startsWith('blob:');
+  const isDriveImage = !item.isVideo && !viewUrl.startsWith('blob:');
 
   const handleTouchStart = (event: TouchEvent) => {
     touchStartX.current = event.changedTouches[0]?.clientX ?? null;
@@ -184,15 +169,16 @@ export function Lightbox({ items, activeIndex, onActiveIndexChange }: LightboxPr
             autoPlay
             playsInline
             onClick={(e) => e.stopPropagation()}
+            onLoadedData={() => setMediaReady(true)}
           />
-        ) : showImageProgressive ? (
-          <div className="lightbox-image-stack" onClick={(e) => e.stopPropagation()}>
-            {!fullLoaded && (
+        ) : (
+          <div className="lightbox-image-wrap" onClick={(e) => e.stopPropagation()}>
+            {isDriveImage && !mediaReady && (
               <>
                 <img
                   src={item.previewUrl}
                   alt=""
-                  className="lightbox-image lightbox-image-preview"
+                  className="lightbox-image lightbox-image-placeholder"
                   aria-hidden="true"
                 />
                 <div className="lightbox-loading" aria-live="polite">
@@ -203,19 +189,18 @@ export function Lightbox({ items, activeIndex, onActiveIndexChange }: LightboxPr
             )}
             <img
               key={item.id}
+              ref={(node) => {
+                if (node?.complete && node.naturalWidth > 0) {
+                  setMediaReady(true);
+                }
+              }}
               src={viewUrl}
               alt={item.name}
-              className={`lightbox-image lightbox-image-full${fullLoaded ? ' is-loaded' : ''}`}
-              onLoad={() => setFullLoaded(true)}
+              className={`lightbox-image${isDriveImage && !mediaReady ? ' lightbox-image-hidden' : ' lightbox-image-visible'}`}
+              onLoad={() => setMediaReady(true)}
+              onError={() => setMediaReady(true)}
             />
           </div>
-        ) : (
-          <img
-            key={item.id}
-            src={viewUrl}
-            alt={item.name}
-            onClick={(e) => e.stopPropagation()}
-          />
         )}
       </div>
 
