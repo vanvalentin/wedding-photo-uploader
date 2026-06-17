@@ -43,9 +43,6 @@ export function CuratedGallery() {
         <a href="/highlights" className="curated-see-more">
           {t.curatedSeeMore}
         </a>
-        <a href="/gallery" className="curated-see-more curated-see-more-secondary">
-          {t.viewAllMedia}
-        </a>
       </div>
     </section>
   );
