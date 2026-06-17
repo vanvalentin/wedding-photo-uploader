@@ -624,7 +624,7 @@ video {
   background: rgba(255, 255, 255, 0.2);
 }
 
-.lightbox-image-stack {
+.lightbox-image-wrap {
   position: relative;
   display: flex;
   align-items: center;
@@ -640,21 +640,22 @@ video {
   border-radius: var(--radius-sm);
 }
 
-.lightbox-image-preview {
+.lightbox-image-placeholder {
   filter: blur(8px);
   transform: scale(1.02);
   opacity: 0.85;
 }
 
-.lightbox-image-full {
+.lightbox-image-hidden {
   position: absolute;
-  inset: 0;
-  margin: auto;
+  width: 1px;
+  height: 1px;
   opacity: 0;
-  transition: opacity 0.25s ease;
+  pointer-events: none;
 }
 
-.lightbox-image-full.is-loaded {
+.lightbox-image-visible {
+  position: relative;
   opacity: 1;
 }
 
