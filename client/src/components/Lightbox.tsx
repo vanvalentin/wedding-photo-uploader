@@ -1,6 +1,7 @@
-import { useEffect, useCallback, useRef, type TouchEvent } from 'react';
+import { useEffect, useCallback, useRef, useState, type TouchEvent } from 'react';
 import type { MediaPreview } from '../types';
 import { useI18n } from '../i18n/I18nContext';
+import { resolveDownloadUrl, resolveViewUrl } from '../utils/mediaUrls';
 
 interface LightboxProps {
   items: MediaPreview[];
@@ -22,9 +23,24 @@ function ChevronIcon({ direction }: { direction: 'left' | 'right' }) {
   );
 }
 
+function DownloadIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 3v12m0 0l4-4m-4 4l-4-4M5 19h14"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function Lightbox({ items, activeIndex, onActiveIndexChange }: LightboxProps) {
   const { t } = useI18n();
   const touchStartX = useRef<number | null>(null);
+  const [fullLoaded, setFullLoaded] = useState(false);
 
   const item = activeIndex !== null ? items[activeIndex] ?? null : null;
   const hasPrevious = activeIndex !== null && activeIndex > 0;
@@ -63,13 +79,30 @@ export function Lightbox({ items, activeIndex, onActiveIndexChange }: LightboxPr
     };
   }, [activeIndex, handleKeyDown]);
 
+  useEffect(() => {
+    setFullLoaded(false);
+  }, [item?.id]);
+
+  useEffect(() => {
+    if (activeIndex === null) return;
+
+    for (const offset of [-1, 1]) {
+      const neighbor = items[activeIndex + offset];
+      if (!neighbor || neighbor.isVideo) continue;
+
+      const url = resolveViewUrl(neighbor);
+      if (url.startsWith('blob:')) continue;
+
+      const img = new Image();
+      img.src = url;
+    }
+  }, [activeIndex, items]);
+
   if (!item || activeIndex === null) return null;
 
-  const viewUrl =
-    item.viewUrl ??
-    (item.previewUrl.includes('/api/media/thumbnail')
-      ? item.previewUrl.replace('/api/media/thumbnail', '/api/media/view')
-      : item.previewUrl);
+  const viewUrl = resolveViewUrl(item);
+  const downloadUrl = resolveDownloadUrl(item);
+  const showImageProgressive = !item.isVideo && !viewUrl.startsWith('blob:');
 
   const handleTouchStart = (event: TouchEvent) => {
     touchStartX.current = event.changedTouches[0]?.clientX ?? null;
@@ -100,6 +133,19 @@ export function Lightbox({ items, activeIndex, onActiveIndexChange }: LightboxPr
           <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
         </svg>
       </button>
+
+      {!item.isVideo && (
+        <a
+          href={downloadUrl}
+          download={item.name}
+          className="lightbox-download"
+          aria-label={t.downloadImage}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <DownloadIcon />
+          <span>{t.downloadImage}</span>
+        </a>
+      )}
 
       {hasPrevious && (
         <button
@@ -139,8 +185,37 @@ export function Lightbox({ items, activeIndex, onActiveIndexChange }: LightboxPr
             playsInline
             onClick={(e) => e.stopPropagation()}
           />
+        ) : showImageProgressive ? (
+          <div className="lightbox-image-stack" onClick={(e) => e.stopPropagation()}>
+            {!fullLoaded && (
+              <>
+                <img
+                  src={item.previewUrl}
+                  alt=""
+                  className="lightbox-image lightbox-image-preview"
+                  aria-hidden="true"
+                />
+                <div className="lightbox-loading" aria-live="polite">
+                  <span className="spinner" aria-hidden="true" />
+                  {t.loadingPreview}
+                </div>
+              </>
+            )}
+            <img
+              key={item.id}
+              src={viewUrl}
+              alt={item.name}
+              className={`lightbox-image lightbox-image-full${fullLoaded ? ' is-loaded' : ''}`}
+              onLoad={() => setFullLoaded(true)}
+            />
+          </div>
         ) : (
-          <img key={item.id} src={viewUrl} alt={item.name} onClick={(e) => e.stopPropagation()} />
+          <img
+            key={item.id}
+            src={viewUrl}
+            alt={item.name}
+            onClick={(e) => e.stopPropagation()}
+          />
         )}
       </div>
 

@@ -56,6 +56,8 @@ export interface Translations {
   videosTab: string;
   viewAllMedia: string;
   viewHighlights: string;
+  downloadImage: string;
+  loadingPreview: string;
 }
 
 export const translations: Record<Locale, Translations> = {
@@ -115,6 +117,8 @@ export const translations: Record<Locale, Translations> = {
     videosTab: 'Videos',
     viewAllMedia: 'All photos & videos',
     viewHighlights: 'View highlights',
+    downloadImage: 'Download',
+    loadingPreview: 'Loading full image…',
   },
   fr: {
     title: 'Partagez vos souvenirs',
@@ -173,6 +177,8 @@ export const translations: Record<Locale, Translations> = {
     videosTab: 'Vidéos',
     viewAllMedia: 'Toutes les photos et vidéos',
     viewHighlights: 'Voir les temps forts',
+    downloadImage: 'Télécharger',
+    loadingPreview: 'Chargement en haute qualité…',
   },
   'zh-HK': {
     title: '分享您的回憶',
@@ -230,5 +236,7 @@ export const translations: Record<Locale, Translations> = {
     videosTab: '影片',
     viewAllMedia: '全部相片及影片',
     viewHighlights: '查看精選回憶',
+    downloadImage: '下載',
+    loadingPreview: '正在載入原圖…',
   },
 };
