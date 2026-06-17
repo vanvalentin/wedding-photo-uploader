@@ -713,6 +713,118 @@ video {
   padding: var(--space-md);
 }
 
+.curated-gallery-footer {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-md);
+}
+
+.curated-see-more {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.625rem 1.25rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text);
+  text-decoration: none;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.curated-see-more:hover {
+  background: var(--color-bg-warm);
+  border-color: var(--color-accent-light);
+}
+
+.highlights-carousel {
+  overflow: hidden;
+  margin-inline: calc(-1 * var(--space-md));
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 8%,
+    black 92%,
+    transparent
+  );
+}
+
+.highlights-carousel-track {
+  display: flex;
+  width: max-content;
+  gap: var(--space-sm);
+  padding-inline: var(--space-md);
+  animation: highlights-carousel-scroll var(--carousel-duration, 48s) linear infinite;
+}
+
+.highlights-carousel:hover .highlights-carousel-track,
+.highlights-carousel:focus-within .highlights-carousel-track {
+  animation-play-state: paused;
+}
+
+.highlights-carousel-slide {
+  flex: 0 0 auto;
+  width: 7.5rem;
+  aspect-ratio: 1;
+  border: none;
+  padding: 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  background: var(--color-bg-warm);
+  box-shadow: 0 2px 8px var(--color-shadow);
+}
+
+.highlights-carousel-slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s;
+}
+
+.highlights-carousel-slide:hover img {
+  transform: scale(1.04);
+}
+
+.highlights-page .header-top {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.highlights-back-link {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.highlights-back-link:hover {
+  color: var(--color-accent);
+}
+
+.highlights-page-title {
+  font-size: clamp(1.75rem, 5vw, 2.25rem);
+}
+
+@keyframes highlights-carousel-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .highlights-carousel-track {
+    animation: none;
+    flex-wrap: wrap;
+    width: auto;
+    justify-content: center;
+  }
+}
+
 /* ─── Admin ─────────────────────────────────────────────────────────────────── */
 .admin-app {
   max-width: 640px;

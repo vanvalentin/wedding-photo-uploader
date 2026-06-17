@@ -42,6 +42,9 @@ export interface Translations {
   curatedGalleryTitle: string;
   curatedGallerySubtitle: string;
   curatedGalleryLoading: string;
+  curatedGalleryEmpty: string;
+  curatedSeeMore: string;
+  backToUpload: string;
 }
 
 export const translations: Record<Locale, Translations> = {
@@ -87,6 +90,9 @@ export const translations: Record<Locale, Translations> = {
     curatedGalleryTitle: 'Highlights',
     curatedGallerySubtitle: 'A few of our favourite moments so far',
     curatedGalleryLoading: 'Loading highlights…',
+    curatedGalleryEmpty: 'No highlights yet.',
+    curatedSeeMore: 'See more',
+    backToUpload: 'Back to upload',
   },
   fr: {
     title: 'Partagez vos souvenirs',
@@ -131,6 +137,9 @@ export const translations: Record<Locale, Translations> = {
     curatedGalleryTitle: 'Temps forts',
     curatedGallerySubtitle: 'Quelques-uns de nos moments préférés',
     curatedGalleryLoading: 'Chargement des temps forts…',
+    curatedGalleryEmpty: 'Aucun temps fort pour le moment.',
+    curatedSeeMore: 'Voir plus',
+    backToUpload: 'Retour au téléversement',
   },
   'zh-HK': {
     title: '分享您的回憶',
@@ -174,5 +183,8 @@ export const translations: Record<Locale, Translations> = {
     curatedGalleryTitle: '精選回憶',
     curatedGallerySubtitle: '我們至目前為止最喜愛的一些時刻',
     curatedGalleryLoading: '正在載入精選回憶…',
+    curatedGalleryEmpty: '暫時未有精選回憶。',
+    curatedSeeMore: '查看更多',
+    backToUpload: '返回上載',
   },
 };
