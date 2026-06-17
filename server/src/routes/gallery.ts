@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getCuratedGalleryItems } from '../../../lib/gallery.js';
+import { getAllMediaGalleryItems, getCuratedGalleryItems } from '../../../lib/gallery.js';
 import { isSupabaseConfigured } from '../../../lib/supabase.js';
 import { fetchDriveMedia, fetchDriveThumbnail, getDriveFileMetadata } from '../../../lib/googleDrive.js';
 
@@ -19,6 +19,25 @@ galleryRouter.get('/curated', async (_req, res) => {
     console.error('Curated gallery error:', error);
     res.status(500).json({
       error: 'Failed to load curated gallery',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+galleryRouter.get('/all', async (_req, res) => {
+  if (!isSupabaseConfigured()) {
+    res.json({ items: [], configured: false });
+    return;
+  }
+
+  try {
+    const items = await getAllMediaGalleryItems();
+    res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+    res.json({ items, configured: true });
+  } catch (error) {
+    console.error('All media gallery error:', error);
+    res.status(500).json({
+      error: 'Failed to load gallery',
       message: error instanceof Error ? error.message : 'Unknown error',
     });
   }

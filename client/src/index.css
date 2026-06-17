@@ -716,6 +716,8 @@ video {
 .curated-gallery-footer {
   display: flex;
   justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
   margin-top: var(--space-md);
 }
 
@@ -736,6 +738,50 @@ video {
 .curated-see-more:hover {
   background: var(--color-bg-warm);
   border-color: var(--color-accent-light);
+}
+
+.curated-see-more-secondary {
+  background: transparent;
+}
+
+.gallery-page-links {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-md);
+}
+
+.gallery-tabs {
+  display: flex;
+  gap: var(--space-sm);
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--space-md);
+}
+
+.gallery-tabs button {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  color: var(--color-text-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.gallery-tabs button.active {
+  color: var(--color-text);
+  border-bottom-color: var(--color-accent);
+}
+
+.infinite-scroll-sentinel {
+  height: 1px;
+  width: 100%;
+}
+
+.gallery-loading-more {
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  padding: var(--space-md) 0;
 }
 
 .highlights-carousel {

@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import type { MediaPreview } from '../types';
 import { useI18n } from '../i18n/I18nContext';
 import { useCuratedGallery } from '../hooks/useCuratedGallery';
@@ -10,14 +11,18 @@ export function HighlightsPage() {
   const { t } = useI18n();
   const { items, loading, error } = useCuratedGallery();
 
-  const previewItems: MediaPreview[] = items.map((item) => ({
-    id: item.id,
-    previewUrl: item.thumbnailUrl,
-    viewUrl: item.viewUrl,
-    name: item.name,
-    isVideo: item.isVideo,
-    caption: item.caption,
-  }));
+  const previewItems: MediaPreview[] = useMemo(
+    () =>
+      items.map((item) => ({
+        id: item.id,
+        previewUrl: item.thumbnailUrl,
+        viewUrl: item.viewUrl,
+        name: item.name,
+        isVideo: item.isVideo,
+        caption: item.caption,
+      })),
+    [items]
+  );
 
   return (
     <div className="app highlights-page">
@@ -41,7 +46,19 @@ export function HighlightsPage() {
           <p className="curated-gallery-loading">{t.curatedGalleryEmpty}</p>
         )}
         {!loading && previewItems.length > 0 && (
-          <MediaPreviewGrid items={previewItems} pageSize={HIGHLIGHTS_PAGE_SIZE} />
+          <MediaPreviewGrid
+            items={previewItems}
+            pageSize={HIGHLIGHTS_PAGE_SIZE}
+            showLoadMore={false}
+            loadMoreOnScroll
+          />
+        )}
+        {!loading && previewItems.length > 0 && (
+          <div className="gallery-page-links">
+            <a href="/gallery" className="curated-see-more">
+              {t.viewAllMedia}
+            </a>
+          </div>
         )}
       </main>
 

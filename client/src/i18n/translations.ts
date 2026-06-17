@@ -45,6 +45,17 @@ export interface Translations {
   curatedGalleryEmpty: string;
   curatedSeeMore: string;
   backToUpload: string;
+  loadingMore: string;
+  allMediaTitle: string;
+  allMediaSubtitle: string;
+  allMediaLoading: string;
+  allMediaEmpty: string;
+  allMediaNoPhotos: string;
+  allMediaNoVideos: string;
+  photosTab: string;
+  videosTab: string;
+  viewAllMedia: string;
+  viewHighlights: string;
 }
 
 export const translations: Record<Locale, Translations> = {
@@ -93,6 +104,17 @@ export const translations: Record<Locale, Translations> = {
     curatedGalleryEmpty: 'No highlights yet.',
     curatedSeeMore: 'See more',
     backToUpload: 'Back to upload',
+    loadingMore: 'Loading more…',
+    allMediaTitle: 'All memories',
+    allMediaSubtitle: 'Every photo and video shared with us',
+    allMediaLoading: 'Loading gallery…',
+    allMediaEmpty: 'No photos or videos yet.',
+    allMediaNoPhotos: 'No photos yet.',
+    allMediaNoVideos: 'No videos yet.',
+    photosTab: 'Photos',
+    videosTab: 'Videos',
+    viewAllMedia: 'All photos & videos',
+    viewHighlights: 'View highlights',
   },
   fr: {
     title: 'Partagez vos souvenirs',
@@ -140,6 +162,17 @@ export const translations: Record<Locale, Translations> = {
     curatedGalleryEmpty: 'Aucun temps fort pour le moment.',
     curatedSeeMore: 'Voir plus',
     backToUpload: 'Retour au téléversement',
+    loadingMore: 'Chargement…',
+    allMediaTitle: 'Tous les souvenirs',
+    allMediaSubtitle: 'Toutes les photos et vidéos partagées avec nous',
+    allMediaLoading: 'Chargement de la galerie…',
+    allMediaEmpty: 'Aucune photo ou vidéo pour le moment.',
+    allMediaNoPhotos: 'Aucune photo pour le moment.',
+    allMediaNoVideos: 'Aucune vidéo pour le moment.',
+    photosTab: 'Photos',
+    videosTab: 'Vidéos',
+    viewAllMedia: 'Toutes les photos et vidéos',
+    viewHighlights: 'Voir les temps forts',
   },
   'zh-HK': {
     title: '分享您的回憶',
@@ -186,5 +219,16 @@ export const translations: Record<Locale, Translations> = {
     curatedGalleryEmpty: '暫時未有精選回憶。',
     curatedSeeMore: '查看更多',
     backToUpload: '返回上載',
+    loadingMore: '載入更多…',
+    allMediaTitle: '全部回憶',
+    allMediaSubtitle: '所有與我們分享的相片和影片',
+    allMediaLoading: '正在載入相簿…',
+    allMediaEmpty: '暫時沒有相片或影片。',
+    allMediaNoPhotos: '暫時沒有相片。',
+    allMediaNoVideos: '暫時沒有影片。',
+    photosTab: '相片',
+    videosTab: '影片',
+    viewAllMedia: '全部相片及影片',
+    viewHighlights: '查看精選回憶',
   },
 };

@@ -21,6 +21,18 @@ export interface CuratedGalleryItem {
   viewUrl: string;
 }
 
+export interface PublicMediaGalleryItem {
+  id: string;
+  driveFileId: string;
+  fileName: string;
+  guestName: string | null;
+  isVideo: boolean;
+  takenAt: string | null;
+  uploadedAt: string;
+  thumbnailUrl: string;
+  viewUrl: string;
+}
+
 /** Number of thumbnails shown before "Load more" on the success screen */
 export const SUCCESS_GALLERY_PAGE_SIZE = 12;
 
