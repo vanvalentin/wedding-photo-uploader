@@ -680,6 +680,32 @@ video {
   border-top-color: white;
 }
 
+.lightbox-progress {
+  width: min(240px, 70vw);
+  height: 4px;
+  margin-top: 0.25rem;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.lightbox-progress-bar {
+  height: 100%;
+  background: white;
+  border-radius: 2px;
+  transition: width 0.15s ease;
+}
+
+.lightbox-progress-bar-indeterminate {
+  width: 40%;
+  animation: lightboxProgressIndeterminate 1.2s ease-in-out infinite;
+}
+
+@keyframes lightboxProgressIndeterminate {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
 /* ─── Thank you ─────────────────────────────────────────────────────────────── */
 .thank-you {
   text-align: center;

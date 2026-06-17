@@ -152,12 +152,26 @@ export async function getDriveFileMetadata(fileId: string): Promise<DriveFileMet
   return response.json() as Promise<DriveFileMetadata>;
 }
 
-export async function fetchDriveThumbnail(fileId: string): Promise<Response> {
+const DEFAULT_THUMBNAIL_SIZE = 220;
+const DEFAULT_PREVIEW_SIZE = 1200;
+
+function driveThumbnailUrl(thumbnailLink: string, maxSize: number): string {
+  if (/=s\d+/.test(thumbnailLink)) {
+    return thumbnailLink.replace(/=s\d+/, `=s${maxSize}`);
+  }
+  return `${thumbnailLink}=s${maxSize}`;
+}
+
+async function fetchDriveThumbnailSized(
+  fileId: string,
+  maxSize: number
+): Promise<Response> {
   const accessToken = await getAccessToken();
   const metadata = await getDriveFileMetadata(fileId);
 
   if (metadata.thumbnailLink) {
-    const thumbnailResponse = await fetch(metadata.thumbnailLink, {
+    const sizedUrl = driveThumbnailUrl(metadata.thumbnailLink, maxSize);
+    const thumbnailResponse = await fetch(sizedUrl, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
@@ -174,6 +188,14 @@ export async function fetchDriveThumbnail(fileId: string): Promise<Response> {
   }
 
   throw new Error('No thumbnail available for this file');
+}
+
+export async function fetchDriveThumbnail(fileId: string): Promise<Response> {
+  return fetchDriveThumbnailSized(fileId, DEFAULT_THUMBNAIL_SIZE);
+}
+
+export async function fetchDrivePreview(fileId: string): Promise<Response> {
+  return fetchDriveThumbnailSized(fileId, DEFAULT_PREVIEW_SIZE);
 }
 
 export async function fetchDriveMedia(fileId: string): Promise<Response> {
