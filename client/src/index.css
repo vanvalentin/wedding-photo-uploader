@@ -931,6 +931,12 @@ video {
   font-size: clamp(1.75rem, 5vw, 2.25rem);
 }
 
+.highlights-header-cta {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-md);
+}
+
 .highlights-section {
   display: flex;
   flex-direction: column;

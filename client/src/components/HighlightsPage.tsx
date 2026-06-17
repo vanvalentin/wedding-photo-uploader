@@ -36,6 +36,11 @@ export function HighlightsPage() {
         <div className="header-content">
           <h1 className="header-title highlights-page-title">{t.curatedGalleryTitle}</h1>
           <p className="header-subtitle">{t.curatedGallerySubtitle}</p>
+          <div className="highlights-header-cta">
+            <a href="/gallery" className="curated-see-more">
+              {t.viewAllMedia}
+            </a>
+          </div>
         </div>
       </header>
 
@@ -53,11 +58,6 @@ export function HighlightsPage() {
             loadMoreOnScroll
           />
         )}
-        <div className="gallery-page-links">
-          <a href="/gallery" className="curated-see-more">
-            {t.viewAllMedia}
-          </a>
-        </div>
       </main>
 
       <footer className="footer">
