@@ -96,11 +96,37 @@ export async function fetchCuratedGallery(): Promise<CuratedGalleryRow[]> {
   const { data, error } = await supabase
     .from('curated_gallery')
     .select('*')
-    .order('sort_order', { ascending: true })
-    .order('taken_at', { ascending: false, nullsFirst: false });
+    .order('taken_at', { ascending: false, nullsFirst: false })
+    .order('sort_order', { ascending: true });
 
   if (error) {
     throw new Error(`Failed to fetch curated gallery: ${error.message}`);
+  }
+
+  return data ?? [];
+}
+
+export interface PublicMediaUploadRow {
+  id: string;
+  drive_file_id: string;
+  file_name: string;
+  guest_name: string | null;
+  is_video: boolean;
+  taken_at: string | null;
+  uploaded_at: string;
+}
+
+export async function fetchPublicMediaUploads(limit = 5000): Promise<PublicMediaUploadRow[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from('media_uploads')
+    .select('id, drive_file_id, file_name, guest_name, is_video, taken_at, uploaded_at')
+    .order('taken_at', { ascending: false, nullsFirst: false })
+    .order('uploaded_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw new Error(`Failed to fetch media uploads: ${error.message}`);
   }
 
   return data ?? [];
