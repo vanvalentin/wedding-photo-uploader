@@ -42,7 +42,8 @@ export function Lightbox({ items, activeIndex, onActiveIndexChange }: LightboxPr
   const { t } = useI18n();
   const touchStartX = useRef<number | null>(null);
   const blobUrlRef = useRef<string | null>(null);
-  const [mediaReady, setMediaReady] = useState(false);
+  const [fullReady, setFullReady] = useState(false);
+  const [mediumPreviewReady, setMediumPreviewReady] = useState(false);
   const [loadProgress, setLoadProgress] = useState<number | null>(null);
   const [fullImageUrl, setFullImageUrl] = useState<string | null>(null);
 
@@ -84,7 +85,8 @@ export function Lightbox({ items, activeIndex, onActiveIndexChange }: LightboxPr
   }, [activeIndex, handleKeyDown]);
 
   useEffect(() => {
-    setMediaReady(false);
+    setFullReady(false);
+    setMediumPreviewReady(false);
     setLoadProgress(null);
     setFullImageUrl(null);
 
@@ -100,6 +102,7 @@ export function Lightbox({ items, activeIndex, onActiveIndexChange }: LightboxPr
 
     if (!isDriveImage) {
       setFullImageUrl(viewUrl);
+      setFullReady(true);
       return;
     }
 
@@ -139,8 +142,14 @@ export function Lightbox({ items, activeIndex, onActiveIndexChange }: LightboxPr
   const viewUrl = resolveViewUrl(item);
   const downloadUrl = resolveDownloadUrl(item);
   const isDriveImage = !item.isVideo && !viewUrl.startsWith('blob:');
-  const mediumPreviewUrl = resolveMediumPreviewUrl(item) ?? item.previewUrl;
-  const displayUrl = isDriveImage ? fullImageUrl : viewUrl;
+  const mediumPreviewUrl = resolveMediumPreviewUrl(item);
+  const visibleSrc =
+    fullReady && fullImageUrl
+      ? fullImageUrl
+      : mediumPreviewReady && mediumPreviewUrl
+        ? mediumPreviewUrl
+        : item.previewUrl;
+  const showFullLoadStatus = isDriveImage && !fullReady;
 
   const handleTouchStart = (event: TouchEvent) => {
     touchStartX.current = event.changedTouches[0]?.clientX ?? null;
@@ -222,44 +231,50 @@ export function Lightbox({ items, activeIndex, onActiveIndexChange }: LightboxPr
             autoPlay
             playsInline
             onClick={(e) => e.stopPropagation()}
-            onLoadedData={() => setMediaReady(true)}
           />
         ) : (
           <div className="lightbox-image-wrap" onClick={(e) => e.stopPropagation()}>
-            {isDriveImage && !mediaReady && (
-              <>
-                <img
-                  src={mediumPreviewUrl}
-                  alt=""
-                  className="lightbox-image lightbox-image-placeholder"
-                  aria-hidden="true"
-                />
-                <div className="lightbox-loading" aria-live="polite">
-                  <span className="spinner" aria-hidden="true" />
-                  <span>{t.loadingPreview}</span>
-                  <div className="lightbox-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={loadProgress ?? undefined}>
-                    <div
-                      className={`lightbox-progress-bar${loadProgress === null ? ' lightbox-progress-bar-indeterminate' : ''}`}
-                      style={loadProgress !== null ? { width: `${loadProgress}%` } : undefined}
-                    />
-                  </div>
-                </div>
-              </>
-            )}
-            {displayUrl && (
+            {isDriveImage && mediumPreviewUrl && !mediumPreviewReady && (
               <img
-                key={item.id}
-                ref={(node) => {
-                  if (node?.complete && node.naturalWidth > 0) {
-                    setMediaReady(true);
-                  }
-                }}
-                src={displayUrl}
-                alt={item.name}
-                className={`lightbox-image${isDriveImage && !mediaReady ? ' lightbox-image-hidden' : ' lightbox-image-visible'}`}
-                onLoad={() => setMediaReady(true)}
-                onError={() => setMediaReady(true)}
+                src={mediumPreviewUrl}
+                alt=""
+                className="lightbox-image-hidden"
+                aria-hidden="true"
+                onLoad={() => setMediumPreviewReady(true)}
               />
+            )}
+            {fullImageUrl && !fullReady && (
+              <img
+                src={fullImageUrl}
+                alt=""
+                className="lightbox-image-hidden"
+                aria-hidden="true"
+                onLoad={() => setFullReady(true)}
+                onError={() => setFullReady(true)}
+              />
+            )}
+            <img
+              key={item.id}
+              src={visibleSrc}
+              alt={item.name}
+              className={`lightbox-image${!fullReady && !mediumPreviewReady ? ' lightbox-image-soft' : ''}`}
+            />
+            {showFullLoadStatus && (
+              <div className="lightbox-load-status" aria-live="polite">
+                <span>{t.loadingPreview}</span>
+                <div
+                  className="lightbox-progress"
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={loadProgress ?? undefined}
+                >
+                  <div
+                    className={`lightbox-progress-bar${loadProgress === null ? ' lightbox-progress-bar-indeterminate' : ''}`}
+                    style={loadProgress !== null ? { width: `${loadProgress}%` } : undefined}
+                  />
+                </div>
+              </div>
             )}
           </div>
         )}
