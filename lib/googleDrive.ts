@@ -164,8 +164,10 @@ function driveThumbnailUrl(thumbnailLink: string, maxSize: number): string {
 
 async function fetchDriveThumbnailSized(
   fileId: string,
-  maxSize: number
+  maxSize: number,
+  options: { allowFullMediaFallback?: boolean } = {}
 ): Promise<Response> {
+  const { allowFullMediaFallback = false } = options;
   const accessToken = await getAccessToken();
   const metadata = await getDriveFileMetadata(fileId);
 
@@ -180,7 +182,7 @@ async function fetchDriveThumbnailSized(
     }
   }
 
-  if (metadata.mimeType.startsWith('image/')) {
+  if (allowFullMediaFallback && metadata.mimeType.startsWith('image/')) {
     return fetch(
       `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -191,7 +193,7 @@ async function fetchDriveThumbnailSized(
 }
 
 export async function fetchDriveThumbnail(fileId: string): Promise<Response> {
-  return fetchDriveThumbnailSized(fileId, DEFAULT_THUMBNAIL_SIZE);
+  return fetchDriveThumbnailSized(fileId, DEFAULT_THUMBNAIL_SIZE, { allowFullMediaFallback: true });
 }
 
 export async function fetchDrivePreview(fileId: string): Promise<Response> {
