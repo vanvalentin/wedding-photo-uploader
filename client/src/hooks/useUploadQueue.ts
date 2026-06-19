@@ -4,7 +4,7 @@ import { ACCEPTED_TYPES, MAX_FILE_SIZE } from '../types';
 import {
   initUploadSession,
   registerUploadComplete,
-  uploadFileResumable,
+  uploadFileToTarget,
 } from '../services/uploadService';
 
 function generateId(): string {
@@ -27,24 +27,26 @@ async function uploadQueueItem(
   updateFile: (id: string, updates: Partial<Pick<QueuedFile, 'status' | 'progress' | 'error'>>) => void
 ): Promise<void> {
   const mimeType = item.file.type || (item.isVideo ? 'video/mp4' : 'image/jpeg');
-  const { sessionUri, fileName: driveFileName } = await initUploadSession(
+  const uploadTarget = await initUploadSession(
     item.file.name,
     mimeType,
     item.file.size,
     guestName || undefined
   );
 
-  await uploadFileResumable(item.file, sessionUri, (progress) => {
+  await uploadFileToTarget(item.file, uploadTarget, mimeType, (progress) => {
     updateFile(item.id, { progress });
   });
 
   try {
     await registerUploadComplete({
-      fileName: driveFileName,
+      fileName: uploadTarget.fileName,
       mimeType,
       fileSize: item.file.size,
       guestName: guestName || undefined,
       isVideo: item.isVideo,
+      storageProvider: uploadTarget.storageProvider,
+      storageKey: uploadTarget.storageKey,
     });
   } catch (error) {
     console.warn('Upload registry failed (upload still succeeded):', error);

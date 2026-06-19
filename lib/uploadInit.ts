@@ -1,5 +1,7 @@
 import { z } from 'zod';
+import { config, type StorageProvider } from './config.js';
 import { createResumableUploadSession } from './googleDrive.js';
+import { createPresignedR2Upload } from './r2Storage.js';
 
 const initUploadSchema = z.object({
   fileName: z.string().min(1).max(500),
@@ -36,6 +38,9 @@ export type UploadInitSuccess = {
   ok: true;
   sessionUri: string;
   fileName: string;
+  storageProvider: StorageProvider;
+  storageKey?: string;
+  uploadMethod: 'drive_resumable' | 'single_put';
 };
 
 export type UploadInitError = {
@@ -61,6 +66,23 @@ export async function processUploadInit(body: unknown): Promise<UploadInitSucces
   const finalFileName = buildFileName(fileName, guestName);
 
   try {
+    if (config.storageProvider === 'r2') {
+      const target = await createPresignedR2Upload({
+        fileName: finalFileName,
+        mimeType,
+        guestName,
+      });
+
+      return {
+        ok: true,
+        sessionUri: target.uploadUrl,
+        fileName: target.fileName,
+        storageProvider: 'r2',
+        storageKey: target.objectKey,
+        uploadMethod: 'single_put',
+      };
+    }
+
     const session = await createResumableUploadSession({
       fileName: finalFileName,
       mimeType,
@@ -72,6 +94,8 @@ export async function processUploadInit(body: unknown): Promise<UploadInitSucces
       ok: true,
       sessionUri: session.sessionUri,
       fileName: session.fileName,
+      storageProvider: 'google_drive',
+      uploadMethod: 'drive_resumable',
     };
   } catch (error) {
     console.error('Upload init error:', error);
