@@ -124,11 +124,23 @@ async function bodyToBuffer(body: unknown): Promise<Buffer> {
     return Buffer.from(await transformBody.transformToByteArray());
   }
 
-  const chunks: Buffer[] = [];
+  const chunks: Uint8Array[] = [];
   for await (const chunk of body as AsyncIterable<Buffer | Uint8Array | string>) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    chunks.push(
+      typeof chunk === 'string'
+        ? new Uint8Array(Buffer.from(chunk))
+        : new Uint8Array(chunk)
+    );
   }
-  return Buffer.concat(chunks);
+
+  const totalLength = chunks.reduce((total, chunk) => total + chunk.byteLength, 0);
+  const buffer = Buffer.alloc(totalLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    buffer.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return buffer;
 }
 
 export async function fetchR2Object(key: string): Promise<{
