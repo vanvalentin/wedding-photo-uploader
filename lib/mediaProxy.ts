@@ -55,6 +55,13 @@ function videoPlaceholder(): Response {
   });
 }
 
+function bufferBody(buffer: Buffer): ArrayBuffer {
+  return buffer.buffer.slice(
+    buffer.byteOffset,
+    buffer.byteOffset + buffer.byteLength
+  ) as ArrayBuffer;
+}
+
 export async function fetchMediaThumbnail(identifier: MediaIdentifier): Promise<Response> {
   if (identifier.provider === 'google_drive') {
     return fetchDriveThumbnail(identifier.key);
@@ -66,7 +73,7 @@ export async function fetchMediaThumbnail(identifier: MediaIdentifier): Promise<
   }
 
   const object = await fetchR2Object(identifier.key);
-  return new Response(object.buffer, {
+  return new Response(bufferBody(object.buffer), {
     status: 200,
     headers: {
       'Content-Type': object.metadata.contentType,

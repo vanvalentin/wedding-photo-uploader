@@ -70,17 +70,19 @@ function storageIdentityKey(row: {
   return `${row.storage_provider ?? 'google_drive'}:${row.storage_key ?? row.drive_file_id}`;
 }
 
-function applyStorageFilter<T>(
+type StorageFilterBuilder<T> = T & {
+  eq: (column: string, value: string) => StorageFilterBuilder<T>;
+};
+
+function applyStorageFilter<T extends { eq: (column: string, value: string) => T }>(
   query: T,
   identity: { driveFileId: string; storageProvider: StorageProvider; storageKey: string }
 ): T {
-  const builder = query as T & {
-    eq: (column: string, value: string) => T;
-  };
+  const builder = query as StorageFilterBuilder<T>;
 
   return builder
     .eq('storage_provider', identity.storageProvider)
-    .eq('storage_key', identity.storageKey);
+    .eq('storage_key', identity.storageKey) as T;
 }
 
 export async function mediaUploadExists(input: StorageIdentityInput | string): Promise<boolean> {
