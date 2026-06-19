@@ -278,6 +278,24 @@ npm run import-drive
 
 Safe to run import multiple times — already-registered files are skipped.
 
+### One-time migration from Google Drive to R2
+
+After existing Drive files are registered in Supabase, copy them to R2 and update the metadata:
+
+```bash
+# Preview the first few rows without copying or updating Supabase
+npm run migrate-drive-to-r2 -- --dry-run --limit 5
+
+# Copy all registered Drive uploads to R2 and update media_uploads + curated_gallery
+npm run migrate-drive-to-r2
+```
+
+The migration is safe to rerun:
+
+- Rows already marked `storage_provider = 'r2'` are not selected.
+- If an R2 object already exists at the deterministic migrated key, the upload is skipped and Supabase is updated.
+- Google Drive files are not deleted.
+
 ### Admin UI (`/admin`)
 
 1. Open `/admin` on your deployed site (or `http://localhost:5173/admin` in dev).

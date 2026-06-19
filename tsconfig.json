@@ -10,5 +10,5 @@
     "noEmit": true,
     "isolatedModules": true
   },
-  "include": ["api/**/*", "lib/**/*"]
+  "include": ["api/**/*", "lib/**/*", "scripts/**/*"]
 }

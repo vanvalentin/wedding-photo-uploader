@@ -5,6 +5,7 @@ import {
   HeadObjectCommand,
   PutObjectCommand,
   S3Client,
+  type PutObjectCommandInput,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { requireR2Config } from './config.js';
@@ -44,6 +45,10 @@ function buildObjectKey(fileName: string): string {
   const month = String(now.getUTCMonth() + 1).padStart(2, '0');
   const day = String(now.getUTCDate()).padStart(2, '0');
   return `uploads/${year}/${month}/${day}/${randomUUID()}-${safeKeySegment(fileName)}`;
+}
+
+export function buildMigratedDriveObjectKey(driveFileId: string, fileName: string): string {
+  return `migrated/google-drive/${safeKeySegment(driveFileId)}/${safeKeySegment(fileName)}`;
 }
 
 export interface PresignedR2Upload {
@@ -113,6 +118,32 @@ export async function headR2Object(key: string): Promise<R2ObjectMetadata> {
     contentLength: response.ContentLength ?? null,
     lastModified: response.LastModified ?? null,
   };
+}
+
+export async function putR2Object(options: {
+  key: string;
+  body: PutObjectCommandInput['Body'];
+  contentType?: string | null;
+  contentLength?: number | null;
+  metadata?: Record<string, string | null | undefined>;
+}): Promise<void> {
+  const r2 = requireR2Config();
+  const metadata = Object.fromEntries(
+    Object.entries(options.metadata ?? {}).filter((entry): entry is [string, string] =>
+      Boolean(entry[1])
+    )
+  );
+
+  await getR2Client().send(
+    new PutObjectCommand({
+      Bucket: r2.bucketName,
+      Key: options.key,
+      Body: options.body,
+      ContentType: options.contentType ?? undefined,
+      ContentLength: options.contentLength ?? undefined,
+      Metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+    })
+  );
 }
 
 async function bodyToBuffer(body: unknown): Promise<Buffer> {
