@@ -1,5 +1,5 @@
 import { JWT } from 'google-auth-library';
-import { config } from './config.js';
+import { requireGoogleDriveConfig } from './config.js';
 
 const DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const DRIVE_READONLY_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
@@ -10,9 +10,10 @@ let jwtClient: JWT | null = null;
 
 function getJwtClient(): JWT {
   if (!jwtClient) {
+    const googleDrive = requireGoogleDriveConfig();
     jwtClient = new JWT({
-      email: config.googleServiceAccount.clientEmail,
-      key: config.googleServiceAccount.privateKey,
+      email: googleDrive.clientEmail,
+      key: googleDrive.privateKey,
       scopes: DRIVE_SCOPES,
     });
   }
@@ -66,11 +67,12 @@ export async function createResumableUploadSession(
   options: ResumableSessionOptions
 ): Promise<ResumableSessionResult> {
   const { fileName, mimeType, fileSize, guestName } = options;
+  const googleDrive = requireGoogleDriveConfig();
   const accessToken = await getAccessToken();
 
   const metadata: Record<string, unknown> = {
     name: fileName,
-    parents: [config.googleDriveFolderId],
+    parents: [googleDrive.folderId],
   };
 
   if (guestName?.trim()) {
@@ -217,11 +219,12 @@ export async function findRecentFileInFolder(
   fileName: string,
   options?: { fileSize?: number; maxAgeMs?: number }
 ): Promise<DriveFileMetadata | null> {
+  const googleDrive = requireGoogleDriveConfig();
   const accessToken = await getAccessToken();
   const maxAgeMs = options?.maxAgeMs ?? 15 * 60 * 1000;
   const escapedName = escapeDriveQueryValue(fileName);
   const query = [
-    `'${config.googleDriveFolderId}' in parents`,
+    `'${googleDrive.folderId}' in parents`,
     `name = '${escapedName}'`,
     'trashed = false',
   ].join(' and ');
@@ -273,9 +276,10 @@ export async function listFolderMediaFiles(
   pageToken?: string,
   pageSize = 100
 ): Promise<ListFolderMediaResult> {
+  const googleDrive = requireGoogleDriveConfig();
   const accessToken = await getAccessToken();
   const query = [
-    `'${config.googleDriveFolderId}' in parents`,
+    `'${googleDrive.folderId}' in parents`,
     'trashed = false',
     "(mimeType contains 'image/' or mimeType contains 'video/')",
   ].join(' and ');

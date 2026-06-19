@@ -4,10 +4,14 @@ import {
   isSupabaseConfigured,
 } from './supabase.js';
 import { getDriveFileMetadata } from './googleDrive.js';
+import { headR2Object } from './r2Storage.js';
+import type { StorageProvider } from './mediaUploads.js';
 
 export interface CuratedGalleryItem {
   id: string;
   driveFileId: string;
+  storageProvider: StorageProvider;
+  storageKey: string;
   caption: string | null;
   sortOrder: number;
   isVideo: boolean;
@@ -20,6 +24,8 @@ export interface CuratedGalleryItem {
 export interface PublicMediaGalleryItem {
   id: string;
   driveFileId: string;
+  storageProvider: StorageProvider;
+  storageKey: string;
   fileName: string;
   guestName: string | null;
   isVideo: boolean;
@@ -29,12 +35,27 @@ export interface PublicMediaGalleryItem {
   viewUrl: string;
 }
 
-function toThumbnailUrl(driveFileId: string): string {
-  return `/api/media/thumbnail?fileId=${encodeURIComponent(driveFileId)}`;
+function storageProvider(row: {
+  storage_provider?: StorageProvider | null;
+  storage_key?: string | null;
+  drive_file_id: string;
+}): { provider: StorageProvider; key: string } {
+  return {
+    provider: row.storage_provider ?? 'google_drive',
+    key: row.storage_key ?? row.drive_file_id,
+  };
 }
 
-function toViewUrl(driveFileId: string): string {
-  return `/api/media/view?fileId=${encodeURIComponent(driveFileId)}`;
+function toMediaUrl(
+  variant: 'thumbnail' | 'preview' | 'view',
+  provider: StorageProvider,
+  key: string
+): string {
+  const params = new URLSearchParams({
+    provider,
+    key,
+  });
+  return `/api/media/${variant}?${params.toString()}`;
 }
 
 export function sortByTakenDateDesc<T extends { takenAt: string | null }>(items: T[]): T[] {
@@ -58,27 +79,36 @@ export async function getCuratedGalleryItems(): Promise<CuratedGalleryItem[]> {
   const items: CuratedGalleryItem[] = [];
 
   for (const row of rows) {
+    const identity = storageProvider(row);
     try {
-      const metadata = await getDriveFileMetadata(row.drive_file_id);
+      const metadata =
+        identity.provider === 'r2'
+          ? await headR2Object(identity.key)
+          : await getDriveFileMetadata(identity.key);
       const takenAt =
         row.taken_at ??
-        metadata.imageMediaMetadata?.time ??
-        metadata.createdTime ??
+        ('imageMediaMetadata' in metadata ? metadata.imageMediaMetadata?.time : null) ??
+        ('createdTime' in metadata ? metadata.createdTime : null) ??
+        ('lastModified' in metadata ? metadata.lastModified?.toISOString() : null) ??
         null;
+      const mimeType =
+        'mimeType' in metadata ? metadata.mimeType : metadata.contentType;
 
       items.push({
         id: row.id,
         driveFileId: row.drive_file_id,
+        storageProvider: identity.provider,
+        storageKey: identity.key,
         caption: row.caption,
         sortOrder: row.sort_order,
-        isVideo: row.is_video || metadata.mimeType.startsWith('video/'),
+        isVideo: row.is_video || mimeType.startsWith('video/'),
         takenAt,
-        name: metadata.name,
-        thumbnailUrl: toThumbnailUrl(row.drive_file_id),
-        viewUrl: toViewUrl(row.drive_file_id),
+        name: 'name' in metadata ? metadata.name : metadata.fileName,
+        thumbnailUrl: toMediaUrl('thumbnail', identity.provider, identity.key),
+        viewUrl: toMediaUrl('view', identity.provider, identity.key),
       });
     } catch (error) {
-      console.warn(`Skipping curated item ${row.drive_file_id}:`, error);
+      console.warn(`Skipping curated item ${identity.provider}:${identity.key}:`, error);
     }
   }
 
@@ -92,15 +122,20 @@ export async function getAllMediaGalleryItems(): Promise<PublicMediaGalleryItem[
 
   const rows = await fetchPublicMediaUploads();
 
-  return rows.map((row) => ({
-    id: row.id,
-    driveFileId: row.drive_file_id,
-    fileName: row.file_name,
-    guestName: row.guest_name,
-    isVideo: row.is_video,
-    takenAt: row.taken_at,
-    uploadedAt: row.uploaded_at,
-    thumbnailUrl: toThumbnailUrl(row.drive_file_id),
-    viewUrl: toViewUrl(row.drive_file_id),
-  }));
+  return rows.map((row) => {
+    const identity = storageProvider(row);
+    return {
+      id: row.id,
+      driveFileId: row.drive_file_id,
+      storageProvider: identity.provider,
+      storageKey: identity.key,
+      fileName: row.file_name,
+      guestName: row.guest_name,
+      isVideo: row.is_video,
+      takenAt: row.taken_at,
+      uploadedAt: row.uploaded_at,
+      thumbnailUrl: toMediaUrl('thumbnail', identity.provider, identity.key),
+      viewUrl: toMediaUrl('view', identity.provider, identity.key),
+    };
+  });
 }
