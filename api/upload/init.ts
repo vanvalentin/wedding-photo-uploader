@@ -27,8 +27,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.status(200).json({
     sessionUri: result.sessionUri,
     fileName: result.fileName,
-    storageProvider: result.storageProvider,
-    storageKey: result.storageKey,
-    uploadMethod: result.uploadMethod,
   });
 }

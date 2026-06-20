@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { findRecentFileInFolder } from './googleDrive.js';
 import { insertMediaUpload, mediaUploadExists } from './mediaUploads.js';
-import { headR2Object } from './r2Storage.js';
 import { isSupabaseConfigured } from './supabase.js';
 
 const uploadCompleteSchema = z.object({
@@ -10,15 +9,11 @@ const uploadCompleteSchema = z.object({
   fileSize: z.number().int().positive().max(5 * 1024 * 1024 * 1024),
   guestName: z.string().max(100).optional(),
   isVideo: z.boolean().optional(),
-  storageProvider: z.enum(['google_drive', 'r2']).optional(),
-  storageKey: z.string().min(1).max(2000).optional(),
 });
 
 export type UploadCompleteSuccess = {
   ok: true;
   driveFileId: string;
-  storageProvider: 'google_drive' | 'r2';
-  storageKey: string;
   alreadyRegistered: boolean;
 };
 
@@ -58,73 +53,9 @@ export async function processUploadComplete(
     };
   }
 
-  const {
-    fileName,
-    mimeType,
-    fileSize,
-    guestName,
-    isVideo,
-    storageProvider = 'google_drive',
-    storageKey,
-  } = parsed.data;
+  const { fileName, mimeType, fileSize, guestName, isVideo } = parsed.data;
 
   try {
-    if (storageProvider === 'r2') {
-      if (!storageKey) {
-        return {
-          ok: false,
-          status: 400,
-          error: 'Invalid request',
-          message: 'storageKey is required for R2 uploads',
-        };
-      }
-
-      const object = await headR2Object(storageKey);
-      if (object.contentLength !== null && object.contentLength !== fileSize) {
-        return {
-          ok: false,
-          status: 409,
-          error: 'Upload size mismatch',
-          message: `Expected ${fileSize} bytes but R2 has ${object.contentLength} bytes`,
-        };
-      }
-
-      const alreadyRegistered = await mediaUploadExists({
-        storageProvider: 'r2',
-        storageKey,
-      });
-
-      if (alreadyRegistered) {
-        return {
-          ok: true,
-          driveFileId: storageKey,
-          storageProvider: 'r2',
-          storageKey,
-          alreadyRegistered: true,
-        };
-      }
-
-      await insertMediaUpload({
-        driveFileId: storageKey,
-        storageProvider: 'r2',
-        storageKey,
-        fileName: object.fileName || fileName,
-        guestName: guestName?.trim() || null,
-        mimeType: object.contentType || mimeType,
-        isVideo: isVideo ?? object.contentType.startsWith('video/'),
-        fileSize,
-        takenAt: object.lastModified?.toISOString() ?? null,
-      });
-
-      return {
-        ok: true,
-        driveFileId: storageKey,
-        storageProvider: 'r2',
-        storageKey,
-        alreadyRegistered: false,
-      };
-    }
-
     let driveFile = null;
 
     for (const delayMs of RETRY_DELAYS_MS) {
@@ -150,8 +81,6 @@ export async function processUploadComplete(
       return {
         ok: true,
         driveFileId: driveFile.id,
-        storageProvider: 'google_drive',
-        storageKey: driveFile.id,
         alreadyRegistered: true,
       };
     }
@@ -172,8 +101,6 @@ export async function processUploadComplete(
     return {
       ok: true,
       driveFileId: driveFile.id,
-      storageProvider: 'google_drive',
-      storageKey: driveFile.id,
       alreadyRegistered: false,
     };
   } catch (error) {

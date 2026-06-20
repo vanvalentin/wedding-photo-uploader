@@ -1,15 +1,14 @@
 # Wedding Media Uploader
 
-A premium, mobile-first web application that lets wedding guests upload photos and videos directly to Cloudflare R2 (recommended) or Google Drive — no login required.
+A premium, mobile-first web application that lets wedding guests upload photos and videos directly to your Google Drive — no login required.
 
-Guests can optionally identify themselves, preview their media in a queue, and upload large files directly to object storage. R2 uploads use presigned browser `PUT` URLs; the legacy Google Drive mode still uses Drive's **Resumable Upload** API.
+Guests can optionally identify themselves, preview their media in a queue, and upload large files reliably via Google Drive's **Resumable Upload** API (chunked uploads sent directly from the browser to Google).
 
 ## Features
 
 - **Anonymous uploads** — no authentication for guests
-- **Cloudflare R2 destination** — cost-effective storage for larger website galleries
-- **Google Drive fallback** — legacy Drive mode is still available
-- **Direct-to-storage uploads** — file bytes do not pass through your server
+- **Google Drive destination** — all media lands in your folder using your Google storage
+- **Resumable chunked uploads** — bypasses size limits; frontend chunks files and uploads directly to the session URI
 - **Bilingual UI** — English & French with a native EN / FR toggle
 - **Optional guest name** — appended to filenames and Drive metadata
 - **Media queue** — multi-file selection with photo/video preview thumbnails
@@ -17,7 +16,7 @@ Guests can optionally identify themselves, preview their media in a queue, and u
 - **Per-file progress bars** — animated progress as chunks upload
 - **Exit guard** — browser warning if leaving during active or unsent uploads
 - **Upload success summary** — photo/video counts and a thumbnail grid with load-more
-- **Curated highlights gallery** — host-picked favourites from Supabase metadata (optional)
+- **Curated highlights gallery** — host-picked favourites from Google Drive via Supabase (optional)
 - **Upload registry** — successful guest uploads are registered in Supabase automatically
 - **Admin curation UI** — browse all uploads and add/remove highlights at `/admin`
 
@@ -26,21 +25,20 @@ Guests can optionally identify themselves, preview their media in a queue, and u
 ```
 ┌─────────────┐     POST /api/upload/init      ┌──────────────────┐
 │   Browser   │ ─────────────────────────────► │  API (Express or │
-│  (React)    │ ◄── presigned URL + metadata ─ │  Vercel serverless)│
+│  (React)    │ ◄── session URI + metadata ─── │  Vercel serverless)│
 └──────┬──────┘                                └────────┬─────────┘
        │                                              │
-       │  PUT file directly                           │ R2 credentials
+       │  PUT chunks (resumable)                      │ Service account
        ▼                                              ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    Cloudflare R2 bucket                       │
-│                  (target bucket: R2_BUCKET_NAME)              │
+│                    Google Drive API                          │
+│              (target folder: GOOGLE_DRIVE_FOLDER_ID)         │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-1. The backend signs an R2 `PUT` URL and returns the **upload URL** plus object key.
-2. The frontend `PUT`s the file directly to R2 — file bytes never pass through your server.
-3. The backend verifies the R2 object and records metadata in Supabase.
-4. Optional guest names are prefixed to filenames (e.g. `Marie_photo.jpg`).
+1. The backend initiates a resumable upload session using the Google Drive API and returns the **session URI**.
+2. The frontend splits each file into 8 MB chunks and `PUT`s them directly to Google — file bytes never pass through your server.
+3. Optional guest names are prefixed to filenames (e.g. `Marie_photo.jpg`) and stored in Drive file descriptions.
 
 ## Required Environment Variables
 
@@ -48,15 +46,9 @@ Copy `.env.example` to `.env` in the project root (or set these in Vercel):
 
 | Variable | Required | Description |
 |---|---|---|
-| `STORAGE_PROVIDER` | Yes | Use `r2` for Cloudflare R2 or `google_drive` for legacy Drive |
-| `R2_ACCOUNT_ID` | R2 | Cloudflare account ID |
-| `R2_ACCESS_KEY_ID` | R2 | R2 API token access key ID |
-| `R2_SECRET_ACCESS_KEY` | R2 | R2 API token secret |
-| `R2_BUCKET_NAME` | R2 | Destination R2 bucket name |
-| `R2_UPLOAD_URL_EXPIRES_IN_SECONDS` | No | Presigned upload URL lifetime (default: `900`) |
-| `GOOGLE_DRIVE_FOLDER_ID` | Drive | Folder ID inside your **Shared Drive** |
-| `GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL` | Drive | Service account email from JSON key |
-| `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | Drive | Service account PEM private key |
+| `GOOGLE_DRIVE_FOLDER_ID` | Yes | Folder ID inside your **Shared Drive** |
+| `GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL` | Yes | Service account email from JSON key |
+| `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | Yes | Service account PEM private key |
 | `PORT` | No | Local Express port (default: `3001`) |
 | `CORS_ORIGIN` | No | Local dev CORS (default: `http://localhost:5173`) |
 | `VITE_API_URL` | No | Leave **empty** on Vercel |
@@ -72,56 +64,7 @@ Copy `.env.example` to `.env` in the project root (or set these in Vercel):
 >
 > Legacy **anon** / **service_role** JWT keys still work as fallbacks but Supabase recommends publishable + secret.
 
-> **R2 bucket CORS:** Because uploads go directly from the browser to R2, configure the bucket CORS policy to allow `PUT` from your website origin and local dev origin.
-
-## Cloudflare R2 Setup (recommended)
-
-### 1. Create a bucket
-
-1. In Cloudflare, go to **R2 Object Storage → Create bucket**.
-2. Copy the bucket name into `R2_BUCKET_NAME`.
-3. Copy your Cloudflare account ID into `R2_ACCOUNT_ID`.
-
-### 2. Create an R2 API token
-
-1. Go to **R2 → Manage R2 API tokens → Create API token**.
-2. Grant object read/write access to the upload bucket.
-3. Copy the generated access key ID and secret into:
-   - `R2_ACCESS_KEY_ID`
-   - `R2_SECRET_ACCESS_KEY`
-
-### 3. Configure bucket CORS
-
-Add a CORS policy like this, replacing the origins with your domains:
-
-```json
-[
-  {
-    "AllowedOrigins": [
-      "https://your-project.vercel.app",
-      "http://localhost:5173"
-    ],
-    "AllowedMethods": ["PUT", "GET", "HEAD"],
-    "AllowedHeaders": ["*"],
-    "ExposeHeaders": ["ETag"],
-    "MaxAgeSeconds": 3600
-  }
-]
-```
-
-### 4. Select R2 in your environment
-
-Set:
-
-```env
-STORAGE_PROVIDER=r2
-R2_ACCOUNT_ID=...
-R2_ACCESS_KEY_ID=...
-R2_SECRET_ACCESS_KEY=...
-R2_BUCKET_NAME=...
-```
-
-> **Google Drive:** The legacy Drive mode uses a **service account** with a Google Workspace **Shared Drive**. Personal Gmail / My Drive is not supported.
+> **Google Drive:** This app uses a **service account** with a Google Workspace **Shared Drive**. Personal Gmail / My Drive is not supported.
 
 ## Google Cloud Setup (Service Account + Shared Drive)
 
@@ -205,11 +148,9 @@ In **Project → Settings → Environment Variables**, add:
 
 | Variable | Value |
 |---|---|
-| `STORAGE_PROVIDER` | `r2` |
-| `R2_ACCOUNT_ID` | Cloudflare account ID |
-| `R2_ACCESS_KEY_ID` | R2 token access key ID |
-| `R2_SECRET_ACCESS_KEY` | R2 token secret |
-| `R2_BUCKET_NAME` | R2 bucket name |
+| `GOOGLE_DRIVE_FOLDER_ID` | Shared Drive folder ID |
+| `GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL` | Service account email |
+| `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | Service account private key |
 
 > **Do not set `VITE_API_URL` on Vercel.** The frontend and API share the same domain, so requests go to `/api/upload/init` automatically.
 
@@ -229,19 +170,19 @@ Your app will be live at `https://your-project.vercel.app`.
 
 1. Open your Vercel URL
 2. Upload a small test photo
-3. Confirm it appears in your R2 bucket
+3. Confirm it appears in your Google Drive folder
 
 Health check: `GET https://your-project.vercel.app/api/upload/health`
 
 ### Vercel free tier notes
 
 - Serverless functions are included on the free Hobby plan (sufficient for a wedding weekend)
-- Only the small `/api/upload/init` and `/api/upload/complete` calls hit your server — large file bytes go directly to R2
+- Only the small `/api/upload/init` and `/api/upload/complete` calls hit your server — large file bytes go directly to Google Drive
 - Supabase is optional but recommended for upload registry, highlights, and admin curation
 
 ## Curated Highlights Gallery (optional)
 
-The home screen can show a **Highlights** section — a host-curated grid of favourite photos/videos from registered uploads, powered by Supabase.
+The home screen can show a **Highlights** section — a host-curated grid of favourite photos/videos from Google Drive, powered by Supabase.
 
 ### Setup
 
@@ -252,11 +193,11 @@ The home screen can show a **Highlights** section — a host-curated grid of fav
    - `SUPABASE_PUBLISHABLE_KEY`
    - `SUPABASE_SECRET_KEY` (server only — never expose client-side)
    - `ADMIN_SECRET` (for `/admin`)
-4. Guest uploads are registered automatically via `POST /api/upload/complete` after each successful storage upload.
+4. Guest uploads are registered automatically via `POST /api/upload/complete` after each successful Drive upload.
 
 ### One-time import (existing Drive photos)
 
-Photos already in your legacy Drive folder **before** deploying the registry are not registered automatically. Import them once:
+Photos already in your Drive folder **before** deploying the registry are not registered automatically. Import them once:
 
 **Option A — Admin UI (recommended)**
 
@@ -278,24 +219,6 @@ npm run import-drive
 
 Safe to run import multiple times — already-registered files are skipped.
 
-### One-time migration from Google Drive to R2
-
-After existing Drive files are registered in Supabase, copy them to R2 and update the metadata:
-
-```bash
-# Preview the first few rows without copying or updating Supabase
-npm run migrate-drive-to-r2 -- --dry-run --limit 5
-
-# Copy all registered Drive uploads to R2 and update media_uploads + curated_gallery
-npm run migrate-drive-to-r2
-```
-
-The migration is safe to rerun:
-
-- Rows already marked `storage_provider = 'r2'` are not selected.
-- If an R2 object already exists at the deterministic migrated key, the upload is skipped and Supabase is updated.
-- Google Drive files are not deleted.
-
 ### Admin UI (`/admin`)
 
 1. Open `/admin` on your deployed site (or `http://localhost:5173/admin` in dev).
@@ -311,15 +234,13 @@ Insert rows into `curated_gallery`:
 
 | Column | Description |
 |---|---|
-| `drive_file_id` | Legacy compatibility ID. For R2 rows, use the same value as `storage_key`. |
-| `storage_provider` | `r2` or `google_drive` |
-| `storage_key` | R2 object key or Google Drive file ID |
+| `drive_file_id` | Google Drive file ID (from the file URL or folder listing) |
 | `caption` | Optional caption shown in the lightbox |
 | `sort_order` | Lower numbers appear first |
 | `is_video` | `true` for videos |
 | `taken_at` | Optional capture date for sorting |
 
-Thumbnails and full-size previews are proxied through `/api/media/thumbnail` and `/api/media/view`.
+Thumbnails and full-size previews are proxied through `/api/media/thumbnail` and `/api/media/view` using the service account.
 
 If Supabase is not configured or the highlights table is empty, the Highlights section is hidden automatically.
 
@@ -347,7 +268,7 @@ The Express server runs via `tsx` and serves the built React app from `client/di
 │   ├── gallery/
 │   │   └── curated.ts      # GET — curated highlights from Supabase
 │   └── media/
-│       ├── thumbnail.ts    # GET — proxy media thumbnail
+│       ├── thumbnail.ts    # GET — proxy Drive thumbnail
 │       └── view.ts         # GET — proxy full media for lightbox
 ├── lib/                    # Shared backend logic (Vercel + Express)
 │   ├── adminAuth.ts
@@ -356,7 +277,6 @@ The Express server runs via `tsx` and serves the built React app from `client/di
 │   ├── driveImport.ts
 │   ├── gallery.ts
 │   ├── googleDrive.ts
-│   ├── r2Storage.ts
 │   ├── mediaUploads.ts
 │   ├── supabase.ts
 │   ├── uploadComplete.ts

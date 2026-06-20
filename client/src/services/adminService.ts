@@ -4,8 +4,6 @@ export const ADMIN_SECRET_STORAGE_KEY = 'wedding-admin-secret';
 export interface AdminMediaUploadItem {
   id: string;
   driveFileId: string;
-  storageProvider: 'google_drive' | 'r2';
-  storageKey: string;
   fileName: string;
   guestName: string | null;
   mimeType: string | null;
@@ -22,8 +20,6 @@ export interface AdminMediaUploadItem {
 export interface AdminCuratedItem {
   id: string;
   driveFileId: string;
-  storageProvider: 'google_drive' | 'r2';
-  storageKey: string;
   caption: string | null;
   sortOrder: number;
   isVideo: boolean;
@@ -129,8 +125,6 @@ export async function addCuratedItem(
   secret: string,
   input: {
     driveFileId: string;
-    storageProvider?: 'google_drive' | 'r2';
-    storageKey?: string;
     caption?: string;
     sortOrder?: number;
     isVideo?: boolean;

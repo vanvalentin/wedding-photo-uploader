@@ -5,9 +5,6 @@ const API_BASE = import.meta.env.VITE_API_URL ?? '';
 export interface InitUploadResponse {
   sessionUri: string;
   fileName: string;
-  storageProvider: 'google_drive' | 'r2';
-  storageKey?: string;
-  uploadMethod: 'drive_resumable' | 'single_put';
 }
 
 export async function initUploadSession(
@@ -109,51 +106,12 @@ export async function uploadFileResumable(
   onProgress(100);
 }
 
-async function uploadFileSinglePut(
-  file: File,
-  uploadUrl: string,
-  mimeType: string,
-  onProgress: (progress: number) => void
-): Promise<void> {
-  onProgress(5);
-  const response = await fetch(uploadUrl, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': mimeType,
-    },
-    body: file,
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => '');
-    throw new Error(`Upload failed (${response.status}): ${errorText}`);
-  }
-
-  onProgress(100);
-}
-
-export async function uploadFileToTarget(
-  file: File,
-  target: InitUploadResponse,
-  mimeType: string,
-  onProgress: (progress: number) => void
-): Promise<void> {
-  if (target.uploadMethod === 'single_put') {
-    await uploadFileSinglePut(file, target.sessionUri, mimeType, onProgress);
-    return;
-  }
-
-  await uploadFileResumable(file, target.sessionUri, onProgress);
-}
-
 export interface RegisterUploadCompleteInput {
   fileName: string;
   mimeType: string;
   fileSize: number;
   guestName?: string;
   isVideo?: boolean;
-  storageProvider?: 'google_drive' | 'r2';
-  storageKey?: string;
 }
 
 export async function registerUploadComplete(

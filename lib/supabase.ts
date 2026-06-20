@@ -3,8 +3,6 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 export interface CuratedGalleryRow {
   id: string;
   drive_file_id: string;
-  storage_provider: 'google_drive' | 'r2';
-  storage_key: string;
   caption: string | null;
   sort_order: number;
   is_video: boolean;
@@ -111,8 +109,6 @@ export async function fetchCuratedGallery(): Promise<CuratedGalleryRow[]> {
 export interface PublicMediaUploadRow {
   id: string;
   drive_file_id: string;
-  storage_provider: 'google_drive' | 'r2';
-  storage_key: string;
   file_name: string;
   guest_name: string | null;
   is_video: boolean;
@@ -124,7 +120,7 @@ export async function fetchPublicMediaUploads(limit = 5000): Promise<PublicMedia
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from('media_uploads')
-    .select('id, drive_file_id, storage_provider, storage_key, file_name, guest_name, is_video, taken_at, uploaded_at')
+    .select('id, drive_file_id, file_name, guest_name, is_video, taken_at, uploaded_at')
     .order('taken_at', { ascending: false, nullsFirst: false })
     .order('uploaded_at', { ascending: false })
     .limit(limit);

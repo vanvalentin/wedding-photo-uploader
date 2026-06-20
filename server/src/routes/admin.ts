@@ -68,8 +68,6 @@ adminRouter.get('/curated', async (req, res) => {
 
 const addCuratedSchema = z.object({
   driveFileId: z.string().min(1),
-  storageProvider: z.enum(['google_drive', 'r2']).optional(),
-  storageKey: z.string().min(1).max(2000).optional(),
   caption: z.string().max(500).optional(),
   sortOrder: z.number().int().min(0).max(10000).optional(),
   isVideo: z.boolean().optional(),
@@ -171,8 +169,6 @@ adminRouter.post('/curated', async (req, res) => {
   try {
     await insertCuratedItem({
       driveFileId: parsed.data.driveFileId,
-      storageProvider: parsed.data.storageProvider,
-      storageKey: parsed.data.storageKey,
       caption: parsed.data.caption,
       sortOrder: parsed.data.sortOrder,
       isVideo: parsed.data.isVideo,

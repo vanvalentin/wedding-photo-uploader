@@ -12,8 +12,6 @@ export interface MediaPreview {
 export interface CuratedGalleryItem {
   id: string;
   driveFileId: string;
-  storageProvider: 'google_drive' | 'r2';
-  storageKey: string;
   caption: string | null;
   sortOrder: number;
   isVideo: boolean;
@@ -26,8 +24,6 @@ export interface CuratedGalleryItem {
 export interface PublicMediaGalleryItem {
   id: string;
   driveFileId: string;
-  storageProvider: 'google_drive' | 'r2';
-  storageKey: string;
   fileName: string;
   guestName: string | null;
   isVideo: boolean;
