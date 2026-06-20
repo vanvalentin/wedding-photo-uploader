@@ -19,9 +19,6 @@ uploadRouter.post('/init', async (req, res) => {
   res.json({
     sessionUri: result.sessionUri,
     fileName: result.fileName,
-    storageProvider: result.storageProvider,
-    storageKey: result.storageKey,
-    uploadMethod: result.uploadMethod,
   });
 });
 
@@ -39,8 +36,6 @@ uploadRouter.post('/complete', async (req, res) => {
 
   res.json({
     driveFileId: result.driveFileId,
-    storageProvider: result.storageProvider,
-    storageKey: result.storageKey,
     alreadyRegistered: result.alreadyRegistered,
   });
 });

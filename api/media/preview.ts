@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { fetchMediaPreview, parseMediaIdentifier } from '../../lib/mediaProxy.js';
+import { fetchDrivePreview } from '../../lib/googleDrive.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
@@ -13,14 +13,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  const identifier = parseMediaIdentifier(req.query);
-  if (!identifier) {
-    res.status(400).json({ error: 'Missing key or fileId query parameter' });
+  const fileId = typeof req.query.fileId === 'string' ? req.query.fileId : null;
+  if (!fileId) {
+    res.status(400).json({ error: 'Missing fileId query parameter' });
     return;
   }
 
   try {
-    const previewResponse = await fetchMediaPreview(identifier);
+    const previewResponse = await fetchDrivePreview(fileId);
     if (!previewResponse.ok) {
       res.status(previewResponse.status).json({ error: 'Failed to fetch preview' });
       return;

@@ -1,12 +1,8 @@
 import { Router } from 'express';
 import { getAllMediaGalleryItems, getCuratedGalleryItems } from '../../../lib/gallery.js';
 import { isSupabaseConfigured } from '../../../lib/supabase.js';
-import {
-  fetchMediaPreview,
-  fetchMediaThumbnail,
-  parseMediaIdentifier,
-  proxyMedia,
-} from '../../../lib/mediaProxy.js';
+import { fetchDrivePreview, fetchDriveThumbnail, getDriveFileMetadata } from '../../../lib/googleDrive.js';
+import { proxyDriveMedia } from '../../../lib/mediaProxy.js';
 
 export const galleryRouter = Router();
 
@@ -51,14 +47,14 @@ galleryRouter.get('/all', async (_req, res) => {
 export const mediaRouter = Router();
 
 mediaRouter.get('/thumbnail', async (req, res) => {
-  const identifier = parseMediaIdentifier(req.query);
-  if (!identifier) {
-    res.status(400).json({ error: 'Missing key or fileId query parameter' });
+  const fileId = typeof req.query.fileId === 'string' ? req.query.fileId : null;
+  if (!fileId) {
+    res.status(400).json({ error: 'Missing fileId query parameter' });
     return;
   }
 
   try {
-    const thumbnailResponse = await fetchMediaThumbnail(identifier);
+    const thumbnailResponse = await fetchDriveThumbnail(fileId);
     if (!thumbnailResponse.ok) {
       res.status(thumbnailResponse.status).json({ error: 'Failed to fetch thumbnail' });
       return;
@@ -80,14 +76,14 @@ mediaRouter.get('/thumbnail', async (req, res) => {
 });
 
 mediaRouter.get('/preview', async (req, res) => {
-  const identifier = parseMediaIdentifier(req.query);
-  if (!identifier) {
-    res.status(400).json({ error: 'Missing key or fileId query parameter' });
+  const fileId = typeof req.query.fileId === 'string' ? req.query.fileId : null;
+  if (!fileId) {
+    res.status(400).json({ error: 'Missing fileId query parameter' });
     return;
   }
 
   try {
-    const previewResponse = await fetchMediaPreview(identifier);
+    const previewResponse = await fetchDrivePreview(fileId);
     if (!previewResponse.ok) {
       res.status(previewResponse.status).json({ error: 'Failed to fetch preview' });
       return;
@@ -109,16 +105,16 @@ mediaRouter.get('/preview', async (req, res) => {
 });
 
 mediaRouter.get('/view', async (req, res) => {
-  const identifier = parseMediaIdentifier(req.query);
-  if (!identifier) {
-    res.status(400).json({ error: 'Missing key or fileId query parameter' });
+  const fileId = typeof req.query.fileId === 'string' ? req.query.fileId : null;
+  if (!fileId) {
+    res.status(400).json({ error: 'Missing fileId query parameter' });
     return;
   }
 
   const download = req.query.download === '1' || req.query.download === 'true';
 
   try {
-    await proxyMedia(identifier, res, { download });
+    await proxyDriveMedia(fileId, res, { download });
   } catch (error) {
     console.error('Media view proxy error:', error);
     if (!res.headersSent) {

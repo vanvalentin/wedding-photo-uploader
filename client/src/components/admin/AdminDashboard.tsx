@@ -148,8 +148,6 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
       await Promise.all([
         addCuratedItem(secret, {
           driveFileId: item.driveFileId,
-          storageProvider: item.storageProvider,
-          storageKey: item.storageKey,
           isVideo: item.isVideo,
           takenAt: item.takenAt,
           sortOrder: curated.length,
