@@ -1,6 +1,7 @@
 import { fetchMediaUploads, type MediaUploadRow } from './mediaUploads.js';
 import { fetchCuratedGallery, type CuratedGalleryRow } from './supabase.js';
 import type { StorageProvider } from './mediaUploads.js';
+import { toMediaThumbnailUrl, toMediaUrl } from './mediaUrls.js';
 
 export interface AdminMediaUploadItem {
   id: string;
@@ -55,15 +56,6 @@ function storageIdentityKey(row: {
   return `${identity.provider}:${identity.key}`;
 }
 
-function toMediaUrl(
-  variant: 'thumbnail' | 'view',
-  provider: StorageProvider,
-  key: string
-): string {
-  const params = new URLSearchParams({ provider, key });
-  return `/api/media/${variant}?${params.toString()}`;
-}
-
 export function mapUploadRow(
   row: MediaUploadRow,
   curatedDriveIds: Set<string>
@@ -81,7 +73,7 @@ export function mapUploadRow(
     fileSize: row.file_size,
     takenAt: row.taken_at,
     uploadedAt: row.uploaded_at,
-    thumbnailUrl: toMediaUrl('thumbnail', identity.provider, identity.key),
+    thumbnailUrl: toMediaThumbnailUrl(identity.provider, identity.key, row.is_video),
     viewUrl: toMediaUrl('view', identity.provider, identity.key),
     isCurated: curatedDriveIds.has(storageIdentityKey(row)),
     reviewed: row.reviewed ?? false,
@@ -101,7 +93,7 @@ export function mapCuratedRow(row: CuratedGalleryRow): AdminCuratedItem {
     takenAt: row.taken_at,
     createdAt: row.created_at,
     fileName: null,
-    thumbnailUrl: toMediaUrl('thumbnail', identity.provider, identity.key),
+    thumbnailUrl: toMediaThumbnailUrl(identity.provider, identity.key, row.is_video),
     viewUrl: toMediaUrl('view', identity.provider, identity.key),
   };
 }

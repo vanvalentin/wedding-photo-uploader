@@ -6,6 +6,7 @@ import {
 import { getDriveFileMetadata } from './googleDrive.js';
 import { headR2Object } from './r2Storage.js';
 import type { StorageProvider } from './mediaUploads.js';
+import { toMediaThumbnailUrl, toMediaUrl } from './mediaUrls.js';
 
 export interface CuratedGalleryItem {
   id: string;
@@ -46,18 +47,6 @@ function storageProvider(row: {
   };
 }
 
-function toMediaUrl(
-  variant: 'thumbnail' | 'preview' | 'view',
-  provider: StorageProvider,
-  key: string
-): string {
-  const params = new URLSearchParams({
-    provider,
-    key,
-  });
-  return `/api/media/${variant}?${params.toString()}`;
-}
-
 export function sortByTakenDateDesc<T extends { takenAt: string | null }>(items: T[]): T[] {
   return [...items].sort((a, b) => {
     const aTime = a.takenAt ? new Date(a.takenAt).getTime() : null;
@@ -94,6 +83,8 @@ export async function getCuratedGalleryItems(): Promise<CuratedGalleryItem[]> {
       const mimeType =
         'mimeType' in metadata ? metadata.mimeType : metadata.contentType;
 
+      const isVideo = row.is_video || mimeType.startsWith('video/');
+
       items.push({
         id: row.id,
         driveFileId: row.drive_file_id,
@@ -101,10 +92,10 @@ export async function getCuratedGalleryItems(): Promise<CuratedGalleryItem[]> {
         storageKey: identity.key,
         caption: row.caption,
         sortOrder: row.sort_order,
-        isVideo: row.is_video || mimeType.startsWith('video/'),
+        isVideo,
         takenAt,
         name: 'name' in metadata ? metadata.name : metadata.fileName,
-        thumbnailUrl: toMediaUrl('thumbnail', identity.provider, identity.key),
+        thumbnailUrl: toMediaThumbnailUrl(identity.provider, identity.key, isVideo),
         viewUrl: toMediaUrl('view', identity.provider, identity.key),
       });
     } catch (error) {
@@ -134,7 +125,7 @@ export async function getAllMediaGalleryItems(): Promise<PublicMediaGalleryItem[
       isVideo: row.is_video,
       takenAt: row.taken_at,
       uploadedAt: row.uploaded_at,
-      thumbnailUrl: toMediaUrl('thumbnail', identity.provider, identity.key),
+      thumbnailUrl: toMediaThumbnailUrl(identity.provider, identity.key, row.is_video),
       viewUrl: toMediaUrl('view', identity.provider, identity.key),
     };
   });
