@@ -1,9 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { z } from 'zod';
 import { verifyAdminSecret, isAdminConfigured } from '../../../lib/adminAuth.js';
-import { config } from '../../../lib/config.js';
 import { createPresignedR2Upload } from '../../../lib/r2Storage.js';
-import { createResumableUploadSession } from '../../../lib/googleDrive.js';
 
 const initSchema = z.object({
   albumId: z.string().uuid(),
@@ -51,46 +49,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  const { albumId, fileName, mimeType, fileSize } = parsed.data;
+  const { albumId, fileName, mimeType } = parsed.data;
   const finalFileName = sanitizeFileName(fileName);
   const albumPrefix = `albums/${albumId}`;
 
   try {
-    if (config.storageProvider === 'r2') {
-      const target = await createPresignedR2Upload({
-        fileName: finalFileName,
-        mimeType,
-        keyPrefix: albumPrefix,
-      });
-
-      res.status(200).json({
-        sessionUri: target.uploadUrl,
-        fileName: target.fileName,
-        storageProvider: 'r2',
-        storageKey: target.objectKey,
-        uploadMethod: 'single_put',
-        thumbnailUpload: target.thumbnailUpload
-          ? {
-              uploadUrl: target.thumbnailUpload.uploadUrl,
-              storageKey: target.thumbnailUpload.objectKey,
-              mimeType: target.thumbnailUpload.mimeType,
-            }
-          : undefined,
-      });
-      return;
-    }
-
-    const session = await createResumableUploadSession({
+    const target = await createPresignedR2Upload({
       fileName: finalFileName,
       mimeType,
-      fileSize,
+      keyPrefix: albumPrefix,
     });
 
     res.status(200).json({
-      sessionUri: session.sessionUri,
-      fileName: session.fileName,
-      storageProvider: 'google_drive',
-      uploadMethod: 'drive_resumable',
+      sessionUri: target.uploadUrl,
+      fileName: target.fileName,
+      storageProvider: 'r2',
+      storageKey: target.objectKey,
+      uploadMethod: 'single_put',
+      thumbnailUpload: target.thumbnailUpload
+        ? {
+            uploadUrl: target.thumbnailUpload.uploadUrl,
+            storageKey: target.thumbnailUpload.objectKey,
+            mimeType: target.thumbnailUpload.mimeType,
+          }
+        : undefined,
     });
   } catch (error) {
     console.error('Album upload init error:', error);
