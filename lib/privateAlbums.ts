@@ -1,5 +1,6 @@
 import { getSupabaseAdmin, isSupabaseAdminConfigured } from './supabase.js';
 import type { StorageProvider } from './mediaUploads.js';
+import { toMediaThumbnailUrl, toMediaUrl } from './mediaUrls.js';
 
 export interface PrivateAlbumRow {
   id: string;
@@ -48,15 +49,6 @@ export interface PrivateAlbumGallery {
   title: string;
   slug: string;
   items: PrivateAlbumGalleryItem[];
-}
-
-function toMediaUrl(
-  variant: 'thumbnail' | 'view',
-  provider: StorageProvider,
-  key: string
-): string {
-  const params = new URLSearchParams({ provider, key });
-  return `/api/media/${variant}?${params.toString()}`;
 }
 
 function normalizeSlug(slug: string): string {
@@ -231,7 +223,7 @@ export async function listPrivateAlbumItems(albumId: string): Promise<PrivateAlb
     fileName: row.file_name,
     isVideo: row.is_video,
     takenAt: row.taken_at,
-    thumbnailUrl: toMediaUrl('thumbnail', row.storage_provider, row.storage_key),
+    thumbnailUrl: toMediaThumbnailUrl(row.storage_provider, row.storage_key, row.is_video),
     viewUrl: toMediaUrl('view', row.storage_provider, row.storage_key),
   }));
 }
