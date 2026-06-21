@@ -88,7 +88,7 @@ async function generateVideoThumbnail(buffer: Buffer, contentType: string): Prom
       '-frames:v',
       '1',
       '-vf',
-      'scale=if(gt(iw,ih),640,-2):if(gt(iw,ih),-2,640)',
+      `scale=${THUMBNAIL_MAX_DIMENSION}:${THUMBNAIL_MAX_DIMENSION}:force_original_aspect_ratio=decrease`,
       '-q:v',
       '4',
       outputPath,
