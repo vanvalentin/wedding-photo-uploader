@@ -3,6 +3,7 @@ import type {
   AdminSortDirection,
   AdminSortField,
   AdminUploaderFilter,
+  AdminUploaderOption,
 } from '../../utils/formatDateTime';
 
 interface AdminSortBarProps {
@@ -16,7 +17,7 @@ interface AdminSortBarProps {
   showReviewFilter?: boolean;
   uploaderFilter?: AdminUploaderFilter;
   onUploaderFilterChange?: (filter: AdminUploaderFilter) => void;
-  uploaderOptions?: string[];
+  uploaderOptions?: AdminUploaderOption[];
   showUploaderFilter?: boolean;
 }
 
@@ -81,10 +82,9 @@ export function AdminSortBar({
             onChange={(event) => onUploaderFilterChange(event.target.value as AdminUploaderFilter)}
           >
             <option value="all">All</option>
-            <option value="__none__">No name</option>
-            {uploaderOptions.map((name) => (
-              <option key={name} value={name}>
-                {name}
+            {uploaderOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
             ))}
           </select>

@@ -19,9 +19,12 @@ import { AdminTakenDateEditor } from './AdminTakenDateEditor';
 import { AdminBulkDateBar } from './AdminBulkDateBar';
 import { AdminAlbumsPanel } from './AdminAlbumsPanel';
 import {
+  buildAdminUploaderOptions,
+  buildAnonymousUploaderGroups,
   filterByReviewStatus,
   filterByUploader,
   formatMediaDateLabel,
+  resolveUploaderLabel,
   sortByMediaDate,
   type AdminReviewFilter,
   type AdminSortDirection,
@@ -92,22 +95,29 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
     [uploads, sortField, sortDirection]
   );
 
-  const uploaderOptions = useMemo(() => {
-    const names = new Set<string>();
-    for (const upload of uploads) {
-      const name = upload.guestName?.trim();
-      if (name) names.add(name);
-    }
-    return [...names].sort((a, b) => a.localeCompare(b));
-  }, [uploads]);
+  const anonymousUploaderGroups = useMemo(
+    () => buildAnonymousUploaderGroups(uploads),
+    [uploads]
+  );
+
+  const uploaderOptions = useMemo(
+    () => buildAdminUploaderOptions(uploads),
+    [uploads]
+  );
+
+  const uploaderFilterLabel = useMemo(
+    () => uploaderOptions.find((option) => option.value === uploaderFilter)?.label,
+    [uploaderOptions, uploaderFilter]
+  );
 
   const filteredUploads = useMemo(
     () =>
       filterByUploader(
         filterByReviewStatus(sortedUploads, reviewFilter),
-        uploaderFilter
+        uploaderFilter,
+        anonymousUploaderGroups
       ),
-    [sortedUploads, reviewFilter, uploaderFilter]
+    [sortedUploads, reviewFilter, uploaderFilter, anonymousUploaderGroups]
   );
 
   const unreviewedCount = useMemo(
@@ -395,9 +405,7 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
           {filteredUploads.length === 0 ? (
             <p className="admin-empty">
               {uploaderFilter !== 'all'
-                ? uploaderFilter === '__none__'
-                  ? 'No uploads without a guest name match the current filters.'
-                  : `No uploads from "${uploaderFilter}" match the current filters.`
+                ? `No uploads from "${uploaderFilterLabel ?? uploaderFilter}" match the current filters.`
                 : reviewFilter === 'unreviewed'
                   ? 'All uploads have been reviewed.'
                   : reviewFilter === 'reviewed'
@@ -405,7 +413,10 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
                     : 'No uploads registered yet. Use Import from Drive for existing folder photos, or wait for new guest uploads.'}
             </p>
           ) : (
-            filteredUploads.map((item) => (
+            filteredUploads.map((item) => {
+              const uploaderLabel = resolveUploaderLabel(item, anonymousUploaderGroups);
+
+              return (
               <article
                 key={item.id}
                 className={`admin-card${item.reviewed ? ' admin-card-reviewed' : ''}${selectedIds.has(item.id) ? ' admin-card-selected' : ''}`}
@@ -435,7 +446,7 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
                 </div>
                 <div className="admin-card-body">
                   <p className="admin-card-title">{item.fileName}</p>
-                  {item.guestName && <p className="admin-card-meta">By {item.guestName}</p>}
+                  {uploaderLabel && <p className="admin-card-meta">By {uploaderLabel}</p>}
                   <AdminTakenDateEditor
                     uploadId={item.id}
                     takenAt={item.takenAt}
@@ -476,7 +487,8 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
                   </div>
                 </div>
               </article>
-            ))
+              );
+            })
           )}
         </div>
         </>
