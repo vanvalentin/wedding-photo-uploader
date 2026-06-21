@@ -67,8 +67,10 @@ export function AdminBulkDateBar({
     }
   };
 
+  const hasSelection = selectedIds.length > 0;
+
   return (
-    <div className="admin-bulk-bar">
+    <div className={`admin-bulk-bar${hasSelection ? ' admin-bulk-bar--selected' : ''}`}>
       <div className="admin-bulk-bar-selection">
         <span className="admin-bulk-bar-count">
           {selectedIds.length > 0
