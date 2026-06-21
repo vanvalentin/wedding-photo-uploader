@@ -1,4 +1,4 @@
-import { getSupabaseAdmin, isSupabaseAdminConfigured } from './supabase.js';
+import { getSupabaseAdmin, isSupabaseAdminConfigured, MEDIA_UPLOADS_QUERY_LIMIT } from './supabase.js';
 import { normalizeTimestamp } from './normalizeTimestamp.js';
 import { deleteDriveFile } from './googleDrive.js';
 import { deleteR2Object } from './r2Storage.js';
@@ -361,7 +361,9 @@ export async function patchMediaUploadsBulk(
   return foundIds.length;
 }
 
-export async function fetchMediaUploads(limit = 200): Promise<MediaUploadRow[]> {
+export async function fetchMediaUploads(
+  limit = MEDIA_UPLOADS_QUERY_LIMIT
+): Promise<MediaUploadRow[]> {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from('media_uploads')
