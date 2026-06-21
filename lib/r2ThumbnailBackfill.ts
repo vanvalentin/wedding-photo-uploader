@@ -78,7 +78,7 @@ async function generateVideoThumbnail(buffer: Buffer, contentType: string): Prom
   const outputPath = path.join(dir, 'thumbnail.jpg');
 
   try {
-    await writeFile(inputPath, buffer);
+    await writeFile(inputPath, new Uint8Array(buffer));
     await execFileAsync('ffmpeg', [
       '-y',
       '-ss',

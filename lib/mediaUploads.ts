@@ -410,7 +410,7 @@ export async function deleteMediaUploadCompletely(id: string): Promise<void> {
 
   const { data: row, error: fetchError } = await supabase
     .from('media_uploads')
-    .select('drive_file_id, storage_provider, storage_key')
+    .select('drive_file_id, storage_provider, storage_key, thumbnail_storage_provider, thumbnail_storage_key')
     .eq('id', id)
     .maybeSingle();
 
