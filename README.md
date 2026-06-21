@@ -99,13 +99,23 @@ Copy `.env.example` to `.env` in the project root (or set these in Vercel):
 
 ### 3. Configure bucket CORS
 
-Add a CORS policy like this, replacing the origins with your domains:
+Direct browser uploads perform an R2 preflight `OPTIONS` request before the `PUT`.
+If the bucket CORS policy is missing, the browser will report a CORS error and R2
+will reject the preflight before the upload starts.
+
+Apply the CORS policy with the helper script:
+
+```bash
+npm run configure-r2-cors -- --origin https://photos.winivalentin.us --origin http://localhost:5173
+```
+
+Or add a CORS policy like this manually in Cloudflare, replacing the origins with your domains:
 
 ```json
 [
   {
     "AllowedOrigins": [
-      "https://your-project.vercel.app",
+      "https://photos.winivalentin.us",
       "http://localhost:5173"
     ],
     "AllowedMethods": ["PUT", "GET", "HEAD"],

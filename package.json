@@ -12,6 +12,7 @@
     "start": "npm run start --prefix server",
     "install:all": "npm install --prefix server && npm install --prefix client",
     "import-drive": "tsx scripts/import-drive.ts",
+    "configure-r2-cors": "tsx scripts/configure-r2-cors.ts",
     "migrate-drive-to-r2": "tsx scripts/migrate-drive-to-r2.ts",
     "flatten-r2-keys": "tsx scripts/flatten-r2-keys.ts",
     "backfill-r2-thumbnails": "tsx scripts/backfill-r2-thumbnails.ts"
