@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { parseMediaIdentifier, proxyMedia } from '../../lib/mediaProxy.js';
+import { getPublicR2ObjectUrl } from '../../lib/mediaUrls.js';
 
 function requestRange(req: VercelRequest): string | undefined {
   return typeof req.headers.range === 'string' ? req.headers.range : undefined;
@@ -24,6 +25,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const download = req.query.download === '1' || req.query.download === 'true';
+  const publicR2Url = identifier.provider === 'r2' ? getPublicR2ObjectUrl(identifier.key) : null;
+  if (publicR2Url) {
+    res.redirect(307, publicR2Url);
+    return;
+  }
 
   try {
     await proxyMedia(identifier, res, { download, range: requestRange(req) });

@@ -319,7 +319,7 @@ Insert rows into `curated_gallery`:
 | `is_video` | `true` for videos |
 | `taken_at` | Optional capture date for sorting |
 
-Thumbnails and full-size previews are proxied through `/api/media/thumbnail` and `/api/media/view`.
+For R2-backed rows, set `R2_PUBLIC_URL` to a public Cloudflare R2 bucket/custom-domain URL so media loads directly from Cloudflare instead of Vercel. Google Drive-backed rows still use `/api/media/*` proxy routes because Drive access requires server-side credentials.
 
 If Supabase is not configured or the highlights table is empty, the Highlights section is hidden automatically.
 
