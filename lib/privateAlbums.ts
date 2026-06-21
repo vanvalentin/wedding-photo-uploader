@@ -1,4 +1,3 @@
-import { hashPassword, verifyPassword } from './passwordHash.js';
 import { getSupabaseAdmin, isSupabaseAdminConfigured } from './supabase.js';
 import type { StorageProvider } from './mediaUploads.js';
 
@@ -6,7 +5,6 @@ export interface PrivateAlbumRow {
   id: string;
   slug: string;
   title: string;
-  password_hash: string;
   created_at: string;
   updated_at: string;
 }
@@ -44,6 +42,12 @@ export interface PrivateAlbumGalleryItem {
   takenAt: string | null;
   thumbnailUrl: string;
   viewUrl: string;
+}
+
+export interface PrivateAlbumGallery {
+  title: string;
+  slug: string;
+  items: PrivateAlbumGalleryItem[];
 }
 
 function toMediaUrl(
@@ -123,7 +127,6 @@ export async function getPrivateAlbumBySlug(slug: string): Promise<PrivateAlbumR
 export async function createPrivateAlbum(input: {
   slug: string;
   title: string;
-  password: string;
 }): Promise<PrivateAlbumSummary> {
   const supabase = getSupabaseAdmin();
   const slug = normalizeSlug(input.slug);
@@ -136,16 +139,11 @@ export async function createPrivateAlbum(input: {
     throw new Error('Album title is required');
   }
 
-  if (!input.password.trim()) {
-    throw new Error('Album password is required');
-  }
-
   const { data, error } = await supabase
     .from('private_albums')
     .insert({
       slug,
       title: input.title.trim(),
-      password_hash: hashPassword(input.password),
     })
     .select('id, slug, title, created_at, updated_at')
     .single();
@@ -171,7 +169,6 @@ export async function updatePrivateAlbum(input: {
   id: string;
   slug?: string;
   title?: string;
-  password?: string;
 }): Promise<void> {
   const supabase = getSupabaseAdmin();
   const updates: Record<string, string> = {
@@ -191,13 +188,6 @@ export async function updatePrivateAlbum(input: {
       throw new Error('Album title is required');
     }
     updates.title = input.title.trim();
-  }
-
-  if (input.password !== undefined) {
-    if (!input.password.trim()) {
-      throw new Error('Album password is required');
-    }
-    updates.password_hash = hashPassword(input.password);
   }
 
   const { error } = await supabase.from('private_albums').update(updates).eq('id', input.id);
@@ -246,21 +236,18 @@ export async function listPrivateAlbumItems(albumId: string): Promise<PrivateAlb
   }));
 }
 
-export async function verifyPrivateAlbumAccess(
-  slug: string,
-  password: string
-): Promise<{ album: PrivateAlbumRow; items: PrivateAlbumGalleryItem[] } | null> {
+export async function getPrivateAlbumGallery(slug: string): Promise<PrivateAlbumGallery | null> {
   const album = await getPrivateAlbumBySlug(slug);
   if (!album) {
     return null;
   }
 
-  if (!verifyPassword(password, album.password_hash)) {
-    return null;
-  }
-
   const items = await listPrivateAlbumItems(album.id);
-  return { album, items };
+  return {
+    title: album.title,
+    slug: album.slug,
+    items,
+  };
 }
 
 export async function addPrivateAlbumItem(input: {
@@ -360,15 +347,6 @@ export async function deletePrivateAlbumItem(id: string): Promise<void> {
       .update({ updated_at: new Date().toISOString() })
       .eq('id', item.album_id);
   }
-}
-
-export async function getPrivateAlbumInfo(slug: string): Promise<{ title: string } | null> {
-  const album = await getPrivateAlbumBySlug(slug);
-  if (!album) {
-    return null;
-  }
-
-  return { title: album.title };
 }
 
 export { normalizeSlug };

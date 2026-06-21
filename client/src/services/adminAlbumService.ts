@@ -56,7 +56,7 @@ export async function fetchAdminAlbums(secret: string): Promise<AdminPrivateAlbu
 
 export async function createPrivateAlbum(
   secret: string,
-  input: { slug: string; title: string; password: string }
+  input: { slug: string; title: string }
 ): Promise<AdminPrivateAlbum> {
   const response = await fetch(`${API_BASE}/api/admin/albums`, {
     method: 'POST',

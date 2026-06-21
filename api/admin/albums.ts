@@ -12,14 +12,12 @@ import {
 const createAlbumSchema = z.object({
   slug: z.string().min(1).max(100),
   title: z.string().min(1).max(200),
-  password: z.string().min(1).max(200),
 });
 
 const updateAlbumSchema = z.object({
   id: z.string().uuid(),
   slug: z.string().min(1).max(100).optional(),
   title: z.string().min(1).max(200).optional(),
-  password: z.string().min(1).max(200).optional(),
 });
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

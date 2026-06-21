@@ -36,7 +36,6 @@ export function AdminAlbumsPanel({ secret, uploads }: AdminAlbumsPanelProps) {
 
   const [newSlug, setNewSlug] = useState('');
   const [newTitle, setNewTitle] = useState('');
-  const [newPassword, setNewPassword] = useState('');
 
   const selectedAlbum = albums.find((album) => album.id === selectedAlbumId) ?? null;
 
@@ -99,13 +98,11 @@ export function AdminAlbumsPanel({ secret, uploads }: AdminAlbumsPanelProps) {
       const album = await createPrivateAlbum(secret, {
         slug: newSlug,
         title: newTitle,
-        password: newPassword,
       });
       setAlbums((current) => [album, ...current]);
       setSelectedAlbumId(album.id);
       setNewSlug('');
       setNewTitle('');
-      setNewPassword('');
       setMessage(`Created album "${album.title}"`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create album');
@@ -223,8 +220,8 @@ export function AdminAlbumsPanel({ secret, uploads }: AdminAlbumsPanelProps) {
       <section className="admin-albums-create">
         <h2>Create private album</h2>
         <p className="admin-albums-help">
-          Each album gets its own link and password. Share the link with the guest and give them the
-          password separately.
+          Each album gets its own unique link. Share the link with the guest — only people with
+          the link can see their photos.
         </p>
         <form className="admin-albums-form" onSubmit={handleCreateAlbum}>
           <label className="guest-name-label" htmlFor="album-title">
@@ -248,19 +245,6 @@ export function AdminAlbumsPanel({ secret, uploads }: AdminAlbumsPanelProps) {
             value={newSlug}
             onChange={(e) => setNewSlug(e.target.value)}
             placeholder="e.g. sarah-james"
-            disabled={busy}
-          />
-
-          <label className="guest-name-label" htmlFor="album-password">
-            Password
-          </label>
-          <input
-            id="album-password"
-            type="password"
-            className="guest-name-input"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            placeholder="Choose a password for this guest"
             disabled={busy}
           />
 

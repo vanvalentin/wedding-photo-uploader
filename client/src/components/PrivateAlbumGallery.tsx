@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { MediaPreview } from '../types';
 import {
-  accessPrivateAlbum,
-  clearAlbumPassword,
-  getStoredAlbumPassword,
+  fetchPrivateAlbum,
   type PrivateAlbumGalleryItem,
 } from '../services/privateAlbumService';
 import { MediaPreviewGrid } from './MediaPreviewGrid';
@@ -11,39 +9,37 @@ import { LanguageToggle } from './LanguageToggle';
 
 interface PrivateAlbumGalleryProps {
   slug: string;
-  onLogout: () => void;
 }
 
 const PAGE_SIZE = 12;
 
-export function PrivateAlbumGallery({ slug, onLogout }: PrivateAlbumGalleryProps) {
+export function PrivateAlbumGallery({ slug }: PrivateAlbumGalleryProps) {
   const [title, setTitle] = useState('');
   const [items, setItems] = useState<PrivateAlbumGalleryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
 
   const loadAlbum = useCallback(async () => {
     setLoading(true);
     setError(null);
-
-    const password = getStoredAlbumPassword(slug);
-    if (!password) {
-      onLogout();
-      return;
-    }
+    setNotFound(false);
 
     try {
-      const result = await accessPrivateAlbum(slug, password);
+      const result = await fetchPrivateAlbum(slug);
+      if (!result) {
+        setNotFound(true);
+        return;
+      }
+
       setTitle(result.title);
       setItems(result.items);
     } catch (err) {
-      clearAlbumPassword(slug);
       setError(err instanceof Error ? err.message : 'Failed to load photos');
-      onLogout();
     } finally {
       setLoading(false);
     }
-  }, [slug, onLogout]);
+  }, [slug]);
 
   useEffect(() => {
     loadAlbum();
@@ -61,18 +57,29 @@ export function PrivateAlbumGallery({ slug, onLogout }: PrivateAlbumGalleryProps
     [items]
   );
 
-  const handleLogout = () => {
-    clearAlbumPassword(slug);
-    onLogout();
-  };
+  if (notFound) {
+    return (
+      <div className="app gallery-page">
+        <main className="main">
+          <div className="admin-login">
+            <h1>Album not found</h1>
+            <p className="admin-login-subtitle">This link may be incorrect or the album was removed.</p>
+            <a href="/" className="admin-back-link">
+              ← Back to home
+            </a>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="app gallery-page">
       <header className="header">
         <div className="header-top">
-          <button type="button" className="highlights-back-link" onClick={handleLogout}>
-            Sign out
-          </button>
+          <a href="/" className="highlights-back-link">
+            ← Home
+          </a>
           <LanguageToggle />
         </div>
         <div className="header-content">

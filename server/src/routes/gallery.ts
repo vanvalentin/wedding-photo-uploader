@@ -1,11 +1,9 @@
 import { Router } from 'express';
-import { z } from 'zod';
 import { getAllMediaGalleryItems, getCuratedGalleryItems } from '../../../lib/gallery.js';
 import { isSupabaseConfigured } from '../../../lib/supabase.js';
 import {
-  getPrivateAlbumInfo,
+  getPrivateAlbumGallery,
   isPrivateAlbumsConfigured,
-  verifyPrivateAlbumAccess,
 } from '../../../lib/privateAlbums.js';
 import {
   fetchMediaPreview,
@@ -54,11 +52,6 @@ galleryRouter.get('/all', async (_req, res) => {
   }
 });
 
-const albumAccessSchema = z.object({
-  slug: z.string().min(1).max(100),
-  password: z.string().min(1).max(200),
-});
-
 export const albumsRouter = Router();
 
 albumsRouter.get('/access', async (req, res) => {
@@ -74,54 +67,18 @@ albumsRouter.get('/access', async (req, res) => {
   }
 
   try {
-    const info = await getPrivateAlbumInfo(slug);
-    if (!info) {
+    const album = await getPrivateAlbumGallery(slug);
+    if (!album) {
       res.status(404).json({ error: 'Album not found' });
       return;
     }
 
-    res.json({ exists: true, title: info.title });
-  } catch (error) {
-    console.error('Private album info error:', error);
-    res.status(500).json({
-      error: 'Failed to load album',
-      message: error instanceof Error ? error.message : 'Unknown error',
-    });
-  }
-});
-
-albumsRouter.post('/access', async (req, res) => {
-  if (!isPrivateAlbumsConfigured()) {
-    res.status(503).json({ error: 'Private albums are not configured' });
-    return;
-  }
-
-  const parsed = albumAccessSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({
-      error: 'Invalid request',
-      details: parsed.error.flatten().fieldErrors,
-    });
-    return;
-  }
-
-  try {
-    const result = await verifyPrivateAlbumAccess(parsed.data.slug, parsed.data.password);
-    if (!result) {
-      res.status(401).json({ error: 'Invalid password or album not found' });
-      return;
-    }
-
     res.setHeader('Cache-Control', 'private, no-store');
-    res.json({
-      title: result.album.title,
-      slug: result.album.slug,
-      items: result.items,
-    });
+    res.json(album);
   } catch (error) {
     console.error('Private album access error:', error);
     res.status(500).json({
-      error: 'Failed to access album',
+      error: 'Failed to load album',
       message: error instanceof Error ? error.message : 'Unknown error',
     });
   }

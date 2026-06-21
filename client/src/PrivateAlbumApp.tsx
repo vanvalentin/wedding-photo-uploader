@@ -1,11 +1,8 @@
-import { useState } from 'react';
 import { parseAlbumSlugFromPath } from './services/privateAlbumService';
-import { PrivateAlbumLogin } from './components/PrivateAlbumLogin';
 import { PrivateAlbumGallery } from './components/PrivateAlbumGallery';
 
 export function PrivateAlbumApp() {
   const slug = parseAlbumSlugFromPath(window.location.pathname);
-  const [authenticated, setAuthenticated] = useState(false);
 
   if (!slug) {
     return (
@@ -21,13 +18,5 @@ export function PrivateAlbumApp() {
     );
   }
 
-  return (
-    <div className="app">
-      {!authenticated ? (
-        <PrivateAlbumLogin slug={slug} onAuthenticated={() => setAuthenticated(true)} />
-      ) : (
-        <PrivateAlbumGallery slug={slug} onLogout={() => setAuthenticated(false)} />
-      )}
-    </div>
-  );
+  return <PrivateAlbumGallery slug={slug} />;
 }
