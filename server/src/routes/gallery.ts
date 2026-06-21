@@ -2,6 +2,10 @@ import { Router } from 'express';
 import { getAllMediaGalleryItems, getCuratedGalleryItems } from '../../../lib/gallery.js';
 import { isSupabaseConfigured } from '../../../lib/supabase.js';
 import {
+  getPrivateAlbumGallery,
+  isPrivateAlbumsConfigured,
+} from '../../../lib/privateAlbums.js';
+import {
   fetchMediaPreview,
   fetchMediaThumbnail,
   parseMediaIdentifier,
@@ -43,6 +47,38 @@ galleryRouter.get('/all', async (_req, res) => {
     console.error('All media gallery error:', error);
     res.status(500).json({
       error: 'Failed to load gallery',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+export const albumsRouter = Router();
+
+albumsRouter.get('/access', async (req, res) => {
+  if (!isPrivateAlbumsConfigured()) {
+    res.status(503).json({ error: 'Private albums are not configured' });
+    return;
+  }
+
+  const slug = typeof req.query.slug === 'string' ? req.query.slug : null;
+  if (!slug) {
+    res.status(400).json({ error: 'Missing slug query parameter' });
+    return;
+  }
+
+  try {
+    const album = await getPrivateAlbumGallery(slug);
+    if (!album) {
+      res.status(404).json({ error: 'Album not found' });
+      return;
+    }
+
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.json(album);
+  } catch (error) {
+    console.error('Private album access error:', error);
+    res.status(500).json({
+      error: 'Failed to load album',
       message: error instanceof Error ? error.message : 'Unknown error',
     });
   }

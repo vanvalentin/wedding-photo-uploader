@@ -51,8 +51,12 @@ function safeMetadataValue(value: string): string {
 
 export const R2_UPLOAD_PREFIX = 'uploads';
 
-export function buildFlatUploadKey(fileName: string): string {
-  return `${R2_UPLOAD_PREFIX}/${randomUUID()}-${safeKeySegment(fileName)}`;
+export function buildFlatUploadKey(fileName: string, keyPrefix?: string): string {
+  const key = `${randomUUID()}-${safeKeySegment(fileName)}`;
+  if (keyPrefix) {
+    return `${keyPrefix.replace(/\/+$/, '')}/${key}`;
+  }
+  return `${R2_UPLOAD_PREFIX}/${key}`;
 }
 
 /** @deprecated Use buildFlatUploadKey */
@@ -76,9 +80,10 @@ export async function createPresignedR2Upload(options: {
   fileName: string;
   mimeType: string;
   guestName?: string;
+  keyPrefix?: string;
 }): Promise<PresignedR2Upload> {
   const r2 = requireR2Config();
-  const objectKey = buildFlatUploadKey(options.fileName);
+  const objectKey = buildFlatUploadKey(options.fileName, options.keyPrefix);
   const metadata: Record<string, string> = {
     original_name: options.fileName,
   };

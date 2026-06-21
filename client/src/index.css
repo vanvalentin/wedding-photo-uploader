@@ -1392,6 +1392,70 @@ video {
   padding: var(--space-lg);
 }
 
+.admin-albums-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.admin-albums-create,
+.admin-albums-items,
+.admin-albums-library {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.admin-albums-create h2,
+.admin-albums-items h2,
+.admin-albums-library h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.admin-albums-help {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.admin-albums-form {
+  display: grid;
+  gap: var(--space-sm);
+  max-width: 28rem;
+}
+
+.admin-albums-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.admin-albums-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.admin-albums-link-label {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.admin-albums-link-url {
+  font-size: 0.8125rem;
+  word-break: break-all;
+}
+
+.admin-albums-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
 /* ─── Responsive tweaks ─────────────────────────────────────────────────────── */
 @media (min-width: 480px) {
   .media-grid {
