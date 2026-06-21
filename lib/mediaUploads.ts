@@ -1,9 +1,37 @@
-import { getSupabaseAdmin, isSupabaseAdminConfigured } from './supabase.js';
+import { getSupabaseAdmin, isSupabaseAdminConfigured, MEDIA_UPLOADS_QUERY_LIMIT } from './supabase.js';
 import { normalizeTimestamp } from './normalizeTimestamp.js';
 import { deleteDriveFile } from './googleDrive.js';
 import { deleteR2Object, isR2ObjectKey } from './r2Storage.js';
+import { fetchPrivateAlbumStorageIdentityKeys } from './privateAlbums.js';
 
 export type StorageProvider = 'google_drive' | 'r2';
+
+export function mediaUploadStorageIdentityKey(row: {
+  drive_file_id: string;
+  storage_provider?: StorageProvider | null;
+  storage_key?: string | null;
+}): string {
+  const provider = row.storage_provider ?? 'google_drive';
+  const key = row.storage_key ?? row.drive_file_id;
+  return `${provider}:${key}`;
+}
+
+export async function fetchGuestMediaUploadRows(
+  limit = MEDIA_UPLOADS_QUERY_LIMIT
+): Promise<MediaUploadRow[]> {
+  if (!isSupabaseAdminConfigured()) {
+    throw new Error('Supabase admin is required to fetch guest uploads');
+  }
+
+  const [uploads, albumStorageKeys] = await Promise.all([
+    fetchMediaUploads(limit),
+    fetchPrivateAlbumStorageIdentityKeys(),
+  ]);
+
+  return uploads.filter(
+    (row) => !albumStorageKeys.has(mediaUploadStorageIdentityKey(row))
+  );
+}
 
 export interface MediaUploadRow {
   id: string;
@@ -361,7 +389,9 @@ export async function patchMediaUploadsBulk(
   return foundIds.length;
 }
 
-export async function fetchMediaUploads(limit = 200): Promise<MediaUploadRow[]> {
+export async function fetchMediaUploads(
+  limit = MEDIA_UPLOADS_QUERY_LIMIT
+): Promise<MediaUploadRow[]> {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from('media_uploads')

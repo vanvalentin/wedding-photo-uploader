@@ -108,6 +108,8 @@ export async function fetchCuratedGallery(): Promise<CuratedGalleryRow[]> {
   return data ?? [];
 }
 
+export const MEDIA_UPLOADS_QUERY_LIMIT = 5000;
+
 export interface PublicMediaUploadRow {
   id: string;
   drive_file_id: string;
@@ -122,7 +124,9 @@ export interface PublicMediaUploadRow {
   uploaded_at: string;
 }
 
-export async function fetchPublicMediaUploads(limit = 5000): Promise<PublicMediaUploadRow[]> {
+export async function fetchPublicMediaUploads(
+  limit = MEDIA_UPLOADS_QUERY_LIMIT
+): Promise<PublicMediaUploadRow[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from('media_uploads')
