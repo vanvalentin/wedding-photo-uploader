@@ -26,8 +26,16 @@ export function toMediaUrl(
 export function toMediaThumbnailUrl(
   provider: StorageProvider,
   key: string,
-  isVideo: boolean
+  isVideo: boolean,
+  thumbnail?: {
+    provider?: StorageProvider | null;
+    key?: string | null;
+  }
 ): string {
+  if (thumbnail?.provider && thumbnail.key) {
+    return toMediaUrl('thumbnail', thumbnail.provider, thumbnail.key);
+  }
+
   if (provider === 'r2' && config.r2.publicUrl && isVideo) {
     const params = new URLSearchParams({
       provider,

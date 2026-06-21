@@ -30,5 +30,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     storageProvider: result.storageProvider,
     storageKey: result.storageKey,
     uploadMethod: result.uploadMethod,
+    thumbnailUpload: result.thumbnailUpload,
   });
 }

@@ -15,6 +15,10 @@ export interface MediaUploadRow {
   mime_type: string | null;
   is_video: boolean;
   file_size: number | null;
+  thumbnail_storage_provider: StorageProvider | null;
+  thumbnail_storage_key: string | null;
+  thumbnail_mime_type: string | null;
+  thumbnail_file_size: number | null;
   taken_at: string | null;
   uploaded_at: string;
   reviewed: boolean;
@@ -29,6 +33,10 @@ export interface InsertMediaUploadInput {
   mimeType?: string | null;
   isVideo: boolean;
   fileSize?: number | null;
+  thumbnailStorageProvider?: StorageProvider | null;
+  thumbnailStorageKey?: string | null;
+  thumbnailMimeType?: string | null;
+  thumbnailFileSize?: number | null;
   takenAt?: string | null;
 }
 
@@ -131,6 +139,12 @@ export async function insertMediaUploadsBatch(inputs: InsertMediaUploadInput[]):
       mime_type: input.mimeType ?? null,
       is_video: input.isVideo,
       file_size: input.fileSize ?? null,
+      thumbnail_storage_provider: input.thumbnailStorageKey
+        ? input.thumbnailStorageProvider ?? identity.storageProvider
+        : null,
+      thumbnail_storage_key: input.thumbnailStorageKey ?? null,
+      thumbnail_mime_type: input.thumbnailMimeType ?? null,
+      thumbnail_file_size: input.thumbnailFileSize ?? null,
       taken_at: normalizeTimestamp(input.takenAt),
     };
   });
@@ -175,6 +189,31 @@ export async function updateTakenAtBatch(
   return updated;
 }
 
+export async function updateMediaUploadThumbnail(
+  id: string,
+  thumbnail: {
+    storageProvider: StorageProvider;
+    storageKey: string;
+    mimeType: string;
+    fileSize: number;
+  }
+): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase
+    .from('media_uploads')
+    .update({
+      thumbnail_storage_provider: thumbnail.storageProvider,
+      thumbnail_storage_key: thumbnail.storageKey,
+      thumbnail_mime_type: thumbnail.mimeType,
+      thumbnail_file_size: thumbnail.fileSize,
+    })
+    .eq('id', id);
+
+  if (error) {
+    throw new Error(`Failed to update media thumbnail: ${error.message}`);
+  }
+}
+
 export async function insertMediaUpload(input: InsertMediaUploadInput): Promise<MediaUploadRow> {
   const identity = resolveStorageIdentity(input);
   const supabase = getSupabaseAdmin();
@@ -189,6 +228,12 @@ export async function insertMediaUpload(input: InsertMediaUploadInput): Promise<
       mime_type: input.mimeType ?? null,
       is_video: input.isVideo,
       file_size: input.fileSize ?? null,
+      thumbnail_storage_provider: input.thumbnailStorageKey
+        ? input.thumbnailStorageProvider ?? identity.storageProvider
+        : null,
+      thumbnail_storage_key: input.thumbnailStorageKey ?? null,
+      thumbnail_mime_type: input.thumbnailMimeType ?? null,
+      thumbnail_file_size: input.thumbnailFileSize ?? null,
       taken_at: normalizeTimestamp(input.takenAt),
     })
     .select('*')
@@ -213,7 +258,7 @@ export async function patchMediaUpload(
 
   const { data: row, error: fetchError } = await supabase
     .from('media_uploads')
-    .select('drive_file_id, storage_provider, storage_key')
+    .select('drive_file_id, storage_provider, storage_key, thumbnail_storage_provider, thumbnail_storage_key')
     .eq('id', id)
     .maybeSingle();
 
@@ -387,6 +432,10 @@ export async function deleteMediaUploadCompletely(id: string): Promise<void> {
     await deleteR2Object(identity.storageKey);
   } else {
     await deleteDriveFile(identity.driveFileId);
+  }
+
+  if (row.thumbnail_storage_provider === 'r2' && row.thumbnail_storage_key) {
+    await deleteR2Object(row.thumbnail_storage_key);
   }
 
   const curatedQuery = supabase

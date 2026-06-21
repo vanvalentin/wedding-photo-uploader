@@ -12,6 +12,9 @@ const uploadCompleteSchema = z.object({
   isVideo: z.boolean().optional(),
   storageProvider: z.enum(['google_drive', 'r2']).optional(),
   storageKey: z.string().min(1).max(2000).optional(),
+  thumbnailStorageKey: z.string().min(1).max(2000).optional(),
+  thumbnailMimeType: z.string().min(1).max(200).optional(),
+  thumbnailFileSize: z.number().int().positive().max(10 * 1024 * 1024).optional(),
 });
 
 export type UploadCompleteSuccess = {
@@ -66,6 +69,9 @@ export async function processUploadComplete(
     isVideo,
     storageProvider = 'google_drive',
     storageKey,
+    thumbnailStorageKey,
+    thumbnailMimeType,
+    thumbnailFileSize,
   } = parsed.data;
 
   try {
@@ -86,6 +92,21 @@ export async function processUploadComplete(
           status: 409,
           error: 'Upload size mismatch',
           message: `Expected ${fileSize} bytes but R2 has ${object.contentLength} bytes`,
+        };
+      }
+
+      let thumbnail: {
+        storageKey: string;
+        mimeType: string;
+        fileSize: number;
+      } | null = null;
+
+      if (thumbnailStorageKey) {
+        const thumbnailObject = await headR2Object(thumbnailStorageKey);
+        thumbnail = {
+          storageKey: thumbnailStorageKey,
+          mimeType: thumbnailObject.contentType || thumbnailMimeType || 'image/jpeg',
+          fileSize: thumbnailObject.contentLength ?? thumbnailFileSize ?? 0,
         };
       }
 
@@ -113,6 +134,10 @@ export async function processUploadComplete(
         mimeType: object.contentType || mimeType,
         isVideo: isVideo ?? object.contentType.startsWith('video/'),
         fileSize,
+        thumbnailStorageProvider: thumbnail ? 'r2' : null,
+        thumbnailStorageKey: thumbnail?.storageKey ?? null,
+        thumbnailMimeType: thumbnail?.mimeType ?? null,
+        thumbnailFileSize: thumbnail?.fileSize ?? null,
         takenAt: object.lastModified?.toISOString() ?? null,
       });
 

@@ -8,6 +8,11 @@ export interface InitUploadResponse {
   storageProvider: 'google_drive' | 'r2';
   storageKey?: string;
   uploadMethod: 'drive_resumable' | 'single_put';
+  thumbnailUpload?: {
+    uploadUrl: string;
+    storageKey: string;
+    mimeType: string;
+  };
 }
 
 export async function initUploadSession(
@@ -146,6 +151,24 @@ export async function uploadFileToTarget(
   await uploadFileResumable(file, target.sessionUri, onProgress);
 }
 
+export async function uploadThumbnailToTarget(
+  thumbnail: Blob,
+  target: NonNullable<InitUploadResponse['thumbnailUpload']>
+): Promise<void> {
+  const response = await fetch(target.uploadUrl, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': target.mimeType,
+    },
+    body: thumbnail,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => '');
+    throw new Error(`Thumbnail upload failed (${response.status}): ${errorText}`);
+  }
+}
+
 export interface RegisterUploadCompleteInput {
   fileName: string;
   mimeType: string;
@@ -154,6 +177,9 @@ export interface RegisterUploadCompleteInput {
   isVideo?: boolean;
   storageProvider?: 'google_drive' | 'r2';
   storageKey?: string;
+  thumbnailStorageKey?: string;
+  thumbnailMimeType?: string;
+  thumbnailFileSize?: number;
 }
 
 export async function registerUploadComplete(

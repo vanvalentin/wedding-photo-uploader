@@ -1,5 +1,6 @@
 import { getSupabaseAdmin, isSupabaseAdminConfigured } from './supabase.js';
 import type { StorageProvider } from './mediaUploads.js';
+import { toMediaThumbnailUrl, toMediaUrl } from './mediaUrls.js';
 
 export interface PrivateAlbumRow {
   id: string;
@@ -48,15 +49,6 @@ export interface PrivateAlbumGallery {
   title: string;
   slug: string;
   items: PrivateAlbumGalleryItem[];
-}
-
-function toMediaUrl(
-  variant: 'thumbnail' | 'view',
-  provider: StorageProvider,
-  key: string
-): string {
-  const params = new URLSearchParams({ provider, key });
-  return `/api/media/${variant}?${params.toString()}`;
 }
 
 function normalizeSlug(slug: string): string {
@@ -223,6 +215,29 @@ export async function listPrivateAlbumItems(albumId: string): Promise<PrivateAlb
     throw new Error(`Failed to list album items: ${error.message}`);
   }
 
+  const storageKeys = [...new Set((data ?? []).map((row) => row.storage_key))];
+  const thumbnailByIdentity = new Map<string, { provider: StorageProvider; key: string }>();
+
+  if (storageKeys.length > 0) {
+    const { data: uploads, error: uploadsError } = await supabase
+      .from('media_uploads')
+      .select('storage_provider, storage_key, thumbnail_storage_provider, thumbnail_storage_key')
+      .in('storage_key', storageKeys);
+
+    if (uploadsError) {
+      throw new Error(`Failed to load album thumbnails: ${uploadsError.message}`);
+    }
+
+    for (const upload of uploads ?? []) {
+      if (upload.thumbnail_storage_provider && upload.thumbnail_storage_key) {
+        thumbnailByIdentity.set(`${upload.storage_provider}:${upload.storage_key}`, {
+          provider: upload.thumbnail_storage_provider,
+          key: upload.thumbnail_storage_key,
+        });
+      }
+    }
+  }
+
   return (data ?? []).map((row) => ({
     id: row.id,
     driveFileId: row.drive_file_id,
@@ -231,7 +246,12 @@ export async function listPrivateAlbumItems(albumId: string): Promise<PrivateAlb
     fileName: row.file_name,
     isVideo: row.is_video,
     takenAt: row.taken_at,
-    thumbnailUrl: toMediaUrl('thumbnail', row.storage_provider, row.storage_key),
+    thumbnailUrl: toMediaThumbnailUrl(
+      row.storage_provider,
+      row.storage_key,
+      row.is_video,
+      thumbnailByIdentity.get(`${row.storage_provider}:${row.storage_key}`)
+    ),
     viewUrl: toMediaUrl('view', row.storage_provider, row.storage_key),
   }));
 }
