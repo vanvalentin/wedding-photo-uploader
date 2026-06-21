@@ -69,7 +69,7 @@ function thumbnailStorage(row: {
   };
 }
 
-export function sortByTakenDateDesc<T extends { takenAt: string | null }>(items: T[]): T[] {
+export function sortByTakenDateAsc<T extends { takenAt: string | null }>(items: T[]): T[] {
   return [...items].sort((a, b) => {
     const aTime = a.takenAt ? new Date(a.takenAt).getTime() : null;
     const bTime = b.takenAt ? new Date(b.takenAt).getTime() : null;
@@ -77,7 +77,7 @@ export function sortByTakenDateDesc<T extends { takenAt: string | null }>(items:
     if (aTime === null && bTime === null) return 0;
     if (aTime === null) return 1;
     if (bTime === null) return -1;
-    return bTime - aTime;
+    return aTime - bTime;
   });
 }
 
@@ -133,7 +133,7 @@ export async function getCuratedGalleryItems(): Promise<CuratedGalleryItem[]> {
     }
   }
 
-  return sortByTakenDateDesc(items);
+  return sortByTakenDateAsc(items);
 }
 
 export async function getAllMediaGalleryItems(): Promise<PublicMediaGalleryItem[]> {
@@ -146,7 +146,7 @@ export async function getAllMediaGalleryItems(): Promise<PublicMediaGalleryItem[
       ? await fetchGuestMediaUploadRows()
       : await fetchPublicMediaUploads();
 
-  return rows.map((row) => {
+  const items = rows.map((row) => {
     const identity = storageProvider(row);
     return {
       id: row.id,
@@ -167,4 +167,6 @@ export async function getAllMediaGalleryItems(): Promise<PublicMediaGalleryItem[
       viewUrl: toMediaUrl('view', identity.provider, identity.key),
     };
   });
+
+  return sortByTakenDateAsc(items);
 }
