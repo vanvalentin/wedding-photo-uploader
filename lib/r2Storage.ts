@@ -177,12 +177,33 @@ async function bodyToBuffer(body: unknown): Promise<Buffer> {
 export async function fetchR2Object(key: string): Promise<{
   metadata: R2ObjectMetadata;
   buffer: Buffer;
+  contentRange: string | null;
+  acceptRanges: string | null;
+}>;
+export async function fetchR2Object(
+  key: string,
+  options: { range?: string }
+): Promise<{
+  metadata: R2ObjectMetadata;
+  buffer: Buffer;
+  contentRange: string | null;
+  acceptRanges: string | null;
+}>;
+export async function fetchR2Object(
+  key: string,
+  options?: { range?: string }
+): Promise<{
+  metadata: R2ObjectMetadata;
+  buffer: Buffer;
+  contentRange: string | null;
+  acceptRanges: string | null;
 }> {
   const r2 = requireR2Config();
   const response = await getR2Client().send(
     new GetObjectCommand({
       Bucket: r2.bucketName,
       Key: key,
+      Range: options?.range,
     })
   );
 
@@ -197,6 +218,8 @@ export async function fetchR2Object(key: string): Promise<{
   return {
     metadata,
     buffer: await bodyToBuffer(response.Body),
+    contentRange: response.ContentRange ?? null,
+    acceptRanges: response.AcceptRanges ?? null,
   };
 }
 

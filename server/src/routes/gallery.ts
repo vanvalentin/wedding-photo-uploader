@@ -118,7 +118,10 @@ mediaRouter.get('/view', async (req, res) => {
   const download = req.query.download === '1' || req.query.download === 'true';
 
   try {
-    await proxyMedia(identifier, res, { download });
+    await proxyMedia(identifier, res, {
+      download,
+      range: typeof req.headers.range === 'string' ? req.headers.range : undefined,
+    });
   } catch (error) {
     console.error('Media view proxy error:', error);
     if (!res.headersSent) {
