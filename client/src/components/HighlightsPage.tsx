@@ -56,6 +56,7 @@ export function HighlightsPage() {
             pageSize={HIGHLIGHTS_PAGE_SIZE}
             showLoadMore={false}
             loadMoreOnScroll
+            selectable
           />
         )}
       </main>

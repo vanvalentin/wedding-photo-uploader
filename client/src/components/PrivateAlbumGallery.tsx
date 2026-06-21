@@ -100,6 +100,7 @@ export function PrivateAlbumGallery({ slug }: PrivateAlbumGalleryProps) {
             pageSize={PAGE_SIZE}
             showLoadMore={false}
             loadMoreOnScroll
+            selectable
           />
         )}
       </main>

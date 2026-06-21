@@ -84,6 +84,7 @@ export function GalleryPage() {
             pageSize={ALL_MEDIA_PAGE_SIZE}
             showLoadMore={false}
             loadMoreOnScroll
+            selectable
           />
         )}
         {!loading && items.length > 0 && (

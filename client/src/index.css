@@ -808,6 +808,129 @@ video {
 
 .media-thumbnail.preview-only .thumbnail-preview {
   cursor: pointer;
+  position: relative;
+}
+
+.media-thumbnail--selected .thumbnail-preview {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.media-grid--selecting {
+  padding-bottom: calc(7rem + var(--safe-bottom));
+}
+
+.media-selection-hint {
+  margin: 0 0 var(--space-md);
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  .media-selection-hint {
+    display: none;
+  }
+}
+
+.media-selection-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 1.375rem;
+  height: 1.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  background: rgba(0, 0, 0, 0.35);
+  color: white;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.media-selection-check--active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.media-selection-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: min(100%, 640px);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  padding-bottom: calc(var(--space-md) + var(--safe-bottom));
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  box-shadow: 0 -4px 20px var(--color-shadow);
+}
+
+.media-selection-bar-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.media-selection-bar-count {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.media-selection-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.media-selection-bar-link {
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-accent);
+  background: none;
+  border: none;
+  padding: 0;
+  touch-action: manipulation;
+}
+
+.media-selection-bar-link:disabled {
+  opacity: 0.45;
+}
+
+.media-selection-bar-download {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0 var(--space-md);
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: white;
+  background: var(--color-accent);
+  border: none;
+  border-radius: var(--radius-md);
+  touch-action: manipulation;
+}
+
+.media-selection-bar-download:disabled {
+  opacity: 0.45;
+}
+
+.media-selection-bar-error {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-error);
 }
 
 /* ─── Curated gallery ───────────────────────────────────────────────────────── */

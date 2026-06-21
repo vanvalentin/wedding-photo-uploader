@@ -58,6 +58,12 @@ export interface Translations {
   viewHighlights: string;
   downloadImage: string;
   loadingPreview: string;
+  selectionModeHint: string;
+  selectedCount: string;
+  selectAll: string;
+  cancelSelection: string;
+  downloadSelected: string;
+  downloadingProgress: string;
 }
 
 export const translations: Record<Locale, Translations> = {
@@ -119,6 +125,12 @@ export const translations: Record<Locale, Translations> = {
     viewHighlights: 'View highlights',
     downloadImage: 'Download',
     loadingPreview: 'Loading full image…',
+    selectionModeHint: 'Long press a photo to select and download',
+    selectedCount: '{count} selected',
+    selectAll: 'Select all',
+    cancelSelection: 'Cancel',
+    downloadSelected: 'Download',
+    downloadingProgress: 'Downloading {current}/{total}…',
   },
   fr: {
     title: 'Partagez vos souvenirs',
@@ -179,6 +191,12 @@ export const translations: Record<Locale, Translations> = {
     viewHighlights: 'Voir les temps forts',
     downloadImage: 'Télécharger',
     loadingPreview: 'Chargement en haute qualité…',
+    selectionModeHint: 'Appui long sur une photo pour sélectionner et télécharger',
+    selectedCount: '{count} sélectionné(s)',
+    selectAll: 'Tout sélectionner',
+    cancelSelection: 'Annuler',
+    downloadSelected: 'Télécharger',
+    downloadingProgress: 'Téléchargement {current}/{total}…',
   },
   'zh-HK': {
     title: '分享您的回憶',
@@ -238,5 +256,11 @@ export const translations: Record<Locale, Translations> = {
     viewHighlights: '查看精選回憶',
     downloadImage: '下載',
     loadingPreview: '正在載入原圖…',
+    selectionModeHint: '長按相片以選取及下載',
+    selectedCount: '已選 {count} 項',
+    selectAll: '全選',
+    cancelSelection: '取消',
+    downloadSelected: '下載',
+    downloadingProgress: '正在下載 {current}/{total}…',
   },
 };
