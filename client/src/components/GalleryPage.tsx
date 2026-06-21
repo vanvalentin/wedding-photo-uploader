@@ -7,7 +7,7 @@ import { MediaPreviewGrid } from './MediaPreviewGrid';
 
 type GalleryTab = 'photos' | 'videos';
 
-const GALLERY_PAGE_SIZE = 12;
+const ALL_MEDIA_PAGE_SIZE = 12;
 
 export function GalleryPage() {
   const { t } = useI18n();
@@ -81,14 +81,14 @@ export function GalleryPage() {
           <MediaPreviewGrid
             key={tab}
             items={previewItems}
-            pageSize={GALLERY_PAGE_SIZE}
+            pageSize={ALL_MEDIA_PAGE_SIZE}
             showLoadMore={false}
             loadMoreOnScroll
           />
         )}
         {!loading && items.length > 0 && (
           <div className="gallery-page-links">
-            <a href="/highlights" className="curated-see-more">
+            <a href="/highlights" className="curated-see-more curated-see-more-secondary">
               {t.viewHighlights}
             </a>
           </div>

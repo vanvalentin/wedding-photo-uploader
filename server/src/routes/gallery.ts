@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { getAllMediaGalleryItems, getCuratedGalleryItems } from '../../../lib/gallery.js';
 import { isSupabaseConfigured } from '../../../lib/supabase.js';
-import { fetchDriveMedia, fetchDriveThumbnail, getDriveFileMetadata } from '../../../lib/googleDrive.js';
+import { fetchDrivePreview, fetchDriveThumbnail, getDriveFileMetadata } from '../../../lib/googleDrive.js';
+import { proxyDriveMedia } from '../../../lib/mediaProxy.js';
 
 export const galleryRouter = Router();
 
@@ -74,7 +75,7 @@ mediaRouter.get('/thumbnail', async (req, res) => {
   }
 });
 
-mediaRouter.get('/view', async (req, res) => {
+mediaRouter.get('/preview', async (req, res) => {
   const fileId = typeof req.query.fileId === 'string' ? req.query.fileId : null;
   if (!fileId) {
     res.status(400).json({ error: 'Missing fileId query parameter' });
@@ -82,26 +83,45 @@ mediaRouter.get('/view', async (req, res) => {
   }
 
   try {
-    const metadata = await getDriveFileMetadata(fileId);
-    const mediaResponse = await fetchDriveMedia(fileId);
-
-    if (!mediaResponse.ok) {
-      res.status(mediaResponse.status).json({ error: 'Failed to fetch media' });
+    const previewResponse = await fetchDrivePreview(fileId);
+    if (!previewResponse.ok) {
+      res.status(previewResponse.status).json({ error: 'Failed to fetch preview' });
       return;
     }
 
-    const contentType = mediaResponse.headers.get('Content-Type') ?? metadata.mimeType;
-    const buffer = Buffer.from(await mediaResponse.arrayBuffer());
+    const contentType = previewResponse.headers.get('Content-Type') ?? 'image/jpeg';
+    const buffer = Buffer.from(await previewResponse.arrayBuffer());
 
     res.setHeader('Content-Type', contentType);
     res.setHeader('Cache-Control', 'public, max-age=3600');
-    res.setHeader('Content-Disposition', `inline; filename="${metadata.name.replace(/"/g, '')}"`);
     res.status(200).send(buffer);
   } catch (error) {
-    console.error('Media view proxy error:', error);
+    console.error('Preview proxy error:', error);
     res.status(500).json({
-      error: 'Failed to load media',
+      error: 'Failed to load preview',
       message: error instanceof Error ? error.message : 'Unknown error',
     });
+  }
+});
+
+mediaRouter.get('/view', async (req, res) => {
+  const fileId = typeof req.query.fileId === 'string' ? req.query.fileId : null;
+  if (!fileId) {
+    res.status(400).json({ error: 'Missing fileId query parameter' });
+    return;
+  }
+
+  const download = req.query.download === '1' || req.query.download === 'true';
+
+  try {
+    await proxyDriveMedia(fileId, res, { download });
+  } catch (error) {
+    console.error('Media view proxy error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: 'Failed to load media',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
   }
 });

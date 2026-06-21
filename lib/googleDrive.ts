@@ -152,16 +152,41 @@ export async function getDriveFileMetadata(fileId: string): Promise<DriveFileMet
   return response.json() as Promise<DriveFileMetadata>;
 }
 
-export async function fetchDriveThumbnail(fileId: string): Promise<Response> {
+const DEFAULT_THUMBNAIL_SIZE = 220;
+const DEFAULT_PREVIEW_SIZE = 1200;
+
+function driveThumbnailUrl(thumbnailLink: string, maxSize: number): string {
+  if (/=s\d+/.test(thumbnailLink)) {
+    return thumbnailLink.replace(/=s\d+/, `=s${maxSize}`);
+  }
+  return `${thumbnailLink}=s${maxSize}`;
+}
+
+function generateVideoPlaceholderSvg(): string {
+  return [
+    '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">',
+    '<rect width="400" height="400" fill="#3d3a36"/>',
+    '<polygon points="165,135 165,265 285,200" fill="#f5f0e8" opacity="0.9"/>',
+    '</svg>',
+  ].join('');
+}
+
+async function fetchDriveThumbnailSized(
+  fileId: string,
+  maxSize: number,
+  options: { allowFullMediaFallback?: boolean } = {}
+): Promise<Response> {
+  const { allowFullMediaFallback = false } = options;
   const metadata = await getDriveFileMetadata(fileId);
 
   if (metadata.thumbnailLink) {
+    const sizedUrl = driveThumbnailUrl(metadata.thumbnailLink, maxSize);
     // thumbnailLink is a signed URL — fetching with OAuth often breaks it
-    let thumbnailResponse = await fetch(metadata.thumbnailLink);
+    let thumbnailResponse = await fetch(sizedUrl);
 
     if (!thumbnailResponse.ok) {
       const accessToken = await getAccessToken();
-      thumbnailResponse = await fetch(metadata.thumbnailLink, {
+      thumbnailResponse = await fetch(sizedUrl, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
     }
@@ -174,7 +199,7 @@ export async function fetchDriveThumbnail(fileId: string): Promise<Response> {
     }
   }
 
-  if (metadata.mimeType.startsWith('image/')) {
+  if (allowFullMediaFallback && metadata.mimeType.startsWith('image/')) {
     const accessToken = await getAccessToken();
     return fetch(
       `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`,
@@ -192,13 +217,12 @@ export async function fetchDriveThumbnail(fileId: string): Promise<Response> {
   throw new Error('No thumbnail available for this file');
 }
 
-function generateVideoPlaceholderSvg(): string {
-  return [
-    '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">',
-    '<rect width="400" height="400" fill="#3d3a36"/>',
-    '<polygon points="165,135 165,265 285,200" fill="#f5f0e8" opacity="0.9"/>',
-    '</svg>',
-  ].join('');
+export async function fetchDriveThumbnail(fileId: string): Promise<Response> {
+  return fetchDriveThumbnailSized(fileId, DEFAULT_THUMBNAIL_SIZE, { allowFullMediaFallback: true });
+}
+
+export async function fetchDrivePreview(fileId: string): Promise<Response> {
+  return fetchDriveThumbnailSized(fileId, DEFAULT_PREVIEW_SIZE);
 }
 
 export async function fetchDriveMedia(fileId: string): Promise<Response> {
