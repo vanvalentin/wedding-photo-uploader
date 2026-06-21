@@ -962,7 +962,8 @@ video {
   pointer-events: none;
 }
 
-.highlights-carousel-slide:hover img {
+.highlights-carousel-slide:hover img,
+.highlights-carousel-slide:hover video {
   transform: scale(1.04);
 }
 
