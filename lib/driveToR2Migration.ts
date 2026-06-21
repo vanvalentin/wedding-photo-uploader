@@ -1,7 +1,7 @@
 import { Readable } from 'node:stream';
 import type { ReadableStream as NodeReadableStream } from 'node:stream/web';
 import { fetchDriveMedia } from './googleDrive.js';
-import { buildMigratedDriveObjectKey, headR2Object, putR2Object } from './r2Storage.js';
+import { buildFlatUploadKey, headR2Object, putR2Object } from './r2Storage.js';
 import { getSupabaseAdmin, isSupabaseAdminConfigured } from './supabase.js';
 
 export interface DriveToR2MigrationOptions {
@@ -157,7 +157,7 @@ async function copyDriveRowToR2(row: DriveMediaUploadRow): Promise<{
   storageKey: string;
   alreadyInR2: boolean;
 }> {
-  const storageKey = buildMigratedDriveObjectKey(row.drive_file_id, row.file_name);
+  const storageKey = buildFlatUploadKey(row.file_name);
   const alreadyInR2 = await r2ObjectExists(storageKey);
 
   if (alreadyInR2) {
@@ -237,7 +237,7 @@ export async function migrateDriveUploadsToR2(
         continue;
       }
 
-      const storageKey = buildMigratedDriveObjectKey(row.drive_file_id, row.file_name);
+      const storageKey = buildFlatUploadKey(row.file_name);
 
       if (dryRun) {
         options.onProgress?.({
