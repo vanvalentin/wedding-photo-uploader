@@ -217,6 +217,37 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
     }
   };
 
+  const handleRemoveUploadFromHighlights = async (item: AdminMediaUploadItem) => {
+    const curatedItem = curated.find(
+      (entry) =>
+        entry.storageProvider === item.storageProvider && entry.storageKey === item.storageKey
+    );
+
+    if (!curatedItem) {
+      setError('Highlight entry not found');
+      return;
+    }
+
+    setBusyId(item.id);
+    setActionMessage(null);
+    setError(null);
+
+    try {
+      await removeCuratedItem(secret, curatedItem.id);
+      setUploads((current) =>
+        current.map((upload) =>
+          upload.id === item.id ? { ...upload, isCurated: false } : upload
+        )
+      );
+      setActionMessage(`Removed "${item.fileName}" from highlights`);
+      await refreshData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to remove highlight');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const handleToggleReviewed = async (item: AdminMediaUploadItem) => {
     setBusyId(item.id);
     setActionMessage(null);
@@ -470,11 +501,21 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
                     </button>
                     <button
                       type="button"
-                      className="admin-primary-button"
-                      disabled={item.isCurated || busyId === item.id}
-                      onClick={() => handleAddToHighlights(item)}
+                      className={item.isCurated ? 'admin-danger-button' : 'admin-primary-button'}
+                      disabled={busyId === item.id}
+                      onClick={() =>
+                        item.isCurated
+                          ? handleRemoveUploadFromHighlights(item)
+                          : handleAddToHighlights(item)
+                      }
                     >
-                      {item.isCurated ? 'In highlights' : busyId === item.id ? 'Adding…' : 'Add to highlights'}
+                      {item.isCurated
+                        ? busyId === item.id
+                          ? 'Removing…'
+                          : 'Remove from highlight'
+                        : busyId === item.id
+                          ? 'Adding…'
+                          : 'Add to highlights'}
                     </button>
                     <button
                       type="button"
