@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import {
+  CopyObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
@@ -28,9 +29,13 @@ function getR2Client(): S3Client {
   return s3Client;
 }
 
+function toAsciiSafe(value: string): string {
+  return value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+}
+
 function safeKeySegment(value: string): string {
   return (
-    value
+    toAsciiSafe(value)
       .trim()
       .replace(/[<>:"/\\|?*\x00-\x1f]/g, '_')
       .replace(/\s+/g, '_')
@@ -39,16 +44,26 @@ function safeKeySegment(value: string): string {
   );
 }
 
-function buildObjectKey(fileName: string): string {
-  const now = new Date();
-  const year = String(now.getUTCFullYear());
-  const month = String(now.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(now.getUTCDate()).padStart(2, '0');
-  return `uploads/${year}/${month}/${day}/${randomUUID()}-${safeKeySegment(fileName)}`;
+function safeMetadataValue(value: string): string {
+  const ascii = toAsciiSafe(value);
+  return /^[\x20-\x7E]*$/.test(ascii) ? ascii : encodeURIComponent(value);
 }
 
-export function buildMigratedDriveObjectKey(driveFileId: string, fileName: string): string {
-  return `migrated/google-drive/${safeKeySegment(driveFileId)}/${safeKeySegment(fileName)}`;
+export const R2_UPLOAD_PREFIX = 'uploads';
+
+export function buildFlatUploadKey(fileName: string): string {
+  return `${R2_UPLOAD_PREFIX}/${randomUUID()}-${safeKeySegment(fileName)}`;
+}
+
+/** @deprecated Use buildFlatUploadKey */
+export function buildMigratedDriveObjectKey(_driveFileId: string, fileName: string): string {
+  return buildFlatUploadKey(fileName);
+}
+
+export function isFlatUploadKey(key: string): boolean {
+  const prefix = `${R2_UPLOAD_PREFIX}/`;
+  if (!key.startsWith(prefix)) return false;
+  return !key.slice(prefix.length).includes('/');
 }
 
 export interface PresignedR2Upload {
@@ -63,7 +78,7 @@ export async function createPresignedR2Upload(options: {
   guestName?: string;
 }): Promise<PresignedR2Upload> {
   const r2 = requireR2Config();
-  const objectKey = buildObjectKey(options.fileName);
+  const objectKey = buildFlatUploadKey(options.fileName);
   const metadata: Record<string, string> = {
     original_name: options.fileName,
   };
@@ -129,9 +144,9 @@ export async function putR2Object(options: {
 }): Promise<void> {
   const r2 = requireR2Config();
   const metadata = Object.fromEntries(
-    Object.entries(options.metadata ?? {}).filter((entry): entry is [string, string] =>
-      Boolean(entry[1])
-    )
+    Object.entries(options.metadata ?? {})
+      .filter((entry): entry is [string, string] => Boolean(entry[1]))
+      .map(([key, value]) => [key, safeMetadataValue(value)])
   );
 
   await getR2Client().send(
@@ -198,6 +213,22 @@ export async function fetchR2Object(key: string): Promise<{
     metadata,
     buffer: await bodyToBuffer(response.Body),
   };
+}
+
+function encodeCopySource(bucket: string, key: string): string {
+  return encodeURIComponent(`${bucket}/${key}`);
+}
+
+export async function copyR2Object(sourceKey: string, destinationKey: string): Promise<void> {
+  const r2 = requireR2Config();
+  await getR2Client().send(
+    new CopyObjectCommand({
+      Bucket: r2.bucketName,
+      CopySource: encodeCopySource(r2.bucketName, sourceKey),
+      Key: destinationKey,
+      MetadataDirective: 'COPY',
+    })
+  );
 }
 
 export async function deleteR2Object(key: string): Promise<void> {
