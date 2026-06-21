@@ -63,7 +63,11 @@ export interface Translations {
   selectAll: string;
   cancelSelection: string;
   downloadSelected: string;
+  downloadSelectedZip: string;
   downloadingProgress: string;
+  zippingProgress: string;
+  downloadZipTooMany: string;
+  downloadZipTooLarge: string;
 }
 
 export const translations: Record<Locale, Translations> = {
@@ -130,7 +134,11 @@ export const translations: Record<Locale, Translations> = {
     selectAll: 'Select all',
     cancelSelection: 'Cancel',
     downloadSelected: 'Download',
+    downloadSelectedZip: 'Download zip',
     downloadingProgress: 'Downloading {current}/{total}…',
+    zippingProgress: 'Creating zip…',
+    downloadZipTooMany: 'Select up to {max} photos to download as a zip',
+    downloadZipTooLarge: 'Selection is too large to zip on this device',
   },
   fr: {
     title: 'Partagez vos souvenirs',
@@ -196,7 +204,11 @@ export const translations: Record<Locale, Translations> = {
     selectAll: 'Tout sélectionner',
     cancelSelection: 'Annuler',
     downloadSelected: 'Télécharger',
+    downloadSelectedZip: 'Télécharger le zip',
     downloadingProgress: 'Téléchargement {current}/{total}…',
+    zippingProgress: 'Création du zip…',
+    downloadZipTooMany: 'Sélectionnez jusqu’à {max} photos pour un zip',
+    downloadZipTooLarge: 'La sélection est trop volumineuse pour un zip sur cet appareil',
   },
   'zh-HK': {
     title: '分享您的回憶',
@@ -261,6 +273,10 @@ export const translations: Record<Locale, Translations> = {
     selectAll: '全選',
     cancelSelection: '取消',
     downloadSelected: '下載',
+    downloadSelectedZip: '下載 zip',
     downloadingProgress: '正在下載 {current}/{total}…',
+    zippingProgress: '正在建立 zip…',
+    downloadZipTooMany: '最多選 {max} 張相片以下載 zip',
+    downloadZipTooLarge: '所選項目太大，無法在此裝置上建立 zip',
   },
 };
