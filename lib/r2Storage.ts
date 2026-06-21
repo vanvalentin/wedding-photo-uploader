@@ -53,6 +53,12 @@ function safeMetadataValue(value: string): string {
 export const R2_UPLOAD_PREFIX = 'uploads';
 export const R2_THUMBNAIL_PREFIX = 'thumbnails';
 
+export function isR2ObjectKey(key: string): boolean {
+  return (
+    key.startsWith(`${R2_UPLOAD_PREFIX}/`) || key.startsWith(`${R2_THUMBNAIL_PREFIX}/`)
+  );
+}
+
 export function buildFlatUploadKey(fileName: string, keyPrefix?: string): string {
   const key = `${randomUUID()}-${safeKeySegment(fileName)}`;
   if (keyPrefix) {
