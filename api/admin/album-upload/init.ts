@@ -69,6 +69,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         storageProvider: 'r2',
         storageKey: target.objectKey,
         uploadMethod: 'single_put',
+        thumbnailUpload: target.thumbnailUpload
+          ? {
+              uploadUrl: target.thumbnailUpload.uploadUrl,
+              storageKey: target.thumbnailUpload.objectKey,
+              mimeType: target.thumbnailUpload.mimeType,
+            }
+          : undefined,
       });
       return;
     }

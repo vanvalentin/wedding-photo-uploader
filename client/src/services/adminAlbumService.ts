@@ -27,6 +27,11 @@ export interface AlbumUploadInitResponse {
   storageProvider: 'google_drive' | 'r2';
   storageKey?: string;
   uploadMethod: 'single_put' | 'drive_resumable';
+  thumbnailUpload?: {
+    uploadUrl: string;
+    storageKey: string;
+    mimeType: string;
+  };
 }
 
 function adminHeaders(secret: string): HeadersInit {

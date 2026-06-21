@@ -14,12 +14,30 @@ import {
   type AdminPrivateAlbum,
   type AdminPrivateAlbumItem,
 } from '../../services/adminAlbumService';
+import {
+  registerUploadComplete,
+  uploadFileToTarget,
+  uploadThumbnailToTarget,
+} from '../../services/uploadService';
+import { generateMediaThumbnail } from '../../utils/thumbnailGenerator';
 import { GalleryMediaThumb } from '../GalleryMediaThumb';
 import { Lightbox } from '../Lightbox';
 
 interface AdminAlbumsPanelProps {
   secret: string;
   uploads: AdminMediaUploadItem[];
+}
+
+interface AlbumUploadStatus {
+  total: number;
+  completed: number;
+  currentFileName: string;
+  currentProgress: number;
+}
+
+function isVideoFile(file: File): boolean {
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+  return file.type.startsWith('video/') || ['mp4', 'mov', 'webm', 'avi'].includes(ext);
 }
 
 export function AdminAlbumsPanel({ secret, uploads }: AdminAlbumsPanelProps) {
@@ -31,6 +49,7 @@ export function AdminAlbumsPanel({ secret, uploads }: AdminAlbumsPanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<AlbumUploadStatus | null>(null);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -164,46 +183,98 @@ export function AdminAlbumsPanel({ secret, uploads }: AdminAlbumsPanelProps) {
   const handleUploadFiles = async (files: FileList | null) => {
     if (!selectedAlbumId || !files?.length) return;
 
+    const selectedFiles = Array.from(files);
     setBusy(true);
     setError(null);
+    setMessage(null);
+    setUploadStatus({
+      total: selectedFiles.length,
+      completed: 0,
+      currentFileName: selectedFiles[0]?.name ?? '',
+      currentProgress: 0,
+    });
 
     try {
-      for (const file of Array.from(files)) {
+      for (const [index, file] of selectedFiles.entries()) {
+        const mimeType = file.type || (isVideoFile(file) ? 'video/mp4' : 'image/jpeg');
+        setUploadStatus({
+          total: selectedFiles.length,
+          completed: index,
+          currentFileName: file.name,
+          currentProgress: 0,
+        });
+
         const init = await initAlbumUpload(secret, {
           albumId: selectedAlbumId,
           fileName: file.name,
-          mimeType: file.type || 'application/octet-stream',
+          mimeType,
           fileSize: file.size,
         });
 
-        const uploadResponse = await fetch(init.sessionUri, {
-          method: init.uploadMethod === 'single_put' ? 'PUT' : 'PUT',
-          headers: init.uploadMethod === 'single_put' ? { 'Content-Type': file.type } : {},
-          body: file,
+        await uploadFileToTarget(file, init, mimeType, (progress) => {
+          setUploadStatus({
+            total: selectedFiles.length,
+            completed: index,
+            currentFileName: file.name,
+            currentProgress: progress,
+          });
         });
 
-        if (!uploadResponse.ok) {
-          throw new Error(`Upload failed for ${file.name}`);
+        let uploadedThumbnail:
+          | { storageKey: string; mimeType: string; fileSize: number }
+          | undefined;
+
+        if (init.thumbnailUpload) {
+          try {
+            const thumbnail = await generateMediaThumbnail(file, isVideoFile(file));
+            await uploadThumbnailToTarget(thumbnail, init.thumbnailUpload);
+            uploadedThumbnail = {
+              storageKey: init.thumbnailUpload.storageKey,
+              mimeType: init.thumbnailUpload.mimeType,
+              fileSize: thumbnail.size,
+            };
+          } catch (thumbnailError) {
+            console.warn('Album thumbnail generation failed (upload still succeeded):', thumbnailError);
+          }
         }
 
-        const storageKey = init.storageKey ?? init.fileName;
+        const completedUpload = await registerUploadComplete({
+          fileName: init.fileName,
+          mimeType,
+          fileSize: file.size,
+          isVideo: isVideoFile(file),
+          storageProvider: init.storageProvider,
+          storageKey: init.storageKey,
+          thumbnailStorageKey: uploadedThumbnail?.storageKey,
+          thumbnailMimeType: uploadedThumbnail?.mimeType,
+          thumbnailFileSize: uploadedThumbnail?.fileSize,
+        });
+
         await addAlbumItemFromUpload(secret, {
           albumId: selectedAlbumId,
-          driveFileId: storageKey,
-          storageProvider: init.storageProvider,
-          storageKey,
+          driveFileId: completedUpload.driveFileId,
+          storageProvider: completedUpload.storageProvider,
+          storageKey: completedUpload.storageKey,
           fileName: init.fileName,
-          mimeType: file.type,
-          isVideo: file.type.startsWith('video/'),
+          mimeType,
+          isVideo: isVideoFile(file),
+        });
+
+        setUploadStatus({
+          total: selectedFiles.length,
+          completed: index + 1,
+          currentFileName: file.name,
+          currentProgress: 100,
         });
       }
 
       await loadAlbumItems(selectedAlbumId);
-      setMessage(`Uploaded ${files.length} photo(s) to album`);
+      setMessage(`Uploaded ${selectedFiles.length} photo(s) to album`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload photos');
     } finally {
       setBusy(false);
+      setUploadStatus(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -291,7 +362,7 @@ export function AdminAlbumsPanel({ secret, uploads }: AdminAlbumsPanelProps) {
                 onClick={() => fileInputRef.current?.click()}
                 disabled={busy || !selectedAlbumId}
               >
-                Upload photos
+                {uploadStatus ? 'Uploading…' : 'Upload photos'}
               </button>
               <input
                 ref={fileInputRef}
@@ -310,6 +381,20 @@ export function AdminAlbumsPanel({ secret, uploads }: AdminAlbumsPanelProps) {
                 Delete album
               </button>
             </div>
+            {uploadStatus && (
+              <div className="admin-album-upload-status" aria-live="polite">
+                <div className="admin-album-upload-status-row">
+                  <span>
+                    Uploading {Math.min(uploadStatus.completed + 1, uploadStatus.total)} of{' '}
+                    {uploadStatus.total}: {uploadStatus.currentFileName}
+                  </span>
+                  <strong>{uploadStatus.currentProgress}%</strong>
+                </div>
+                <div className="admin-album-upload-progress" aria-hidden="true">
+                  <span style={{ width: `${uploadStatus.currentProgress}%` }} />
+                </div>
+              </div>
+            )}
           </div>
 
           <section className="admin-albums-items">
