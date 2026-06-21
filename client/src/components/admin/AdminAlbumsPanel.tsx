@@ -343,7 +343,7 @@ export function AdminAlbumsPanel({ secret, uploads }: AdminAlbumsPanelProps) {
             >
               {albums.map((album) => (
                 <option key={album.id} value={album.id}>
-                  {album.title} ({album.itemCount} photos)
+                  {album.slug} ({album.itemCount} photos)
                 </option>
               ))}
             </select>
