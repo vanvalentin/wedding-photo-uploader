@@ -1,10 +1,15 @@
 import { getSupabaseAdmin, isSupabaseAdminConfigured } from './supabase.js';
 import { normalizeTimestamp } from './normalizeTimestamp.js';
 import { deleteDriveFile } from './googleDrive.js';
+import { deleteR2Object } from './r2Storage.js';
+
+export type StorageProvider = 'google_drive' | 'r2';
 
 export interface MediaUploadRow {
   id: string;
   drive_file_id: string;
+  storage_provider: StorageProvider;
+  storage_key: string;
   file_name: string;
   guest_name: string | null;
   mime_type: string | null;
@@ -17,6 +22,8 @@ export interface MediaUploadRow {
 
 export interface InsertMediaUploadInput {
   driveFileId: string;
+  storageProvider?: StorageProvider;
+  storageKey?: string;
   fileName: string;
   guestName?: string | null;
   mimeType?: string | null;
@@ -25,13 +32,66 @@ export interface InsertMediaUploadInput {
   takenAt?: string | null;
 }
 
-export async function mediaUploadExists(driveFileId: string): Promise<boolean> {
+export interface StorageIdentityInput {
+  driveFileId?: string;
+  storageProvider?: StorageProvider;
+  storageKey?: string;
+}
+
+function resolveStorageIdentity(input: StorageIdentityInput | string): {
+  driveFileId: string;
+  storageProvider: StorageProvider;
+  storageKey: string;
+} {
+  if (typeof input === 'string') {
+    return {
+      driveFileId: input,
+      storageProvider: 'google_drive',
+      storageKey: input,
+    };
+  }
+
+  const storageProvider = input.storageProvider ?? 'google_drive';
+  const storageKey = input.storageKey ?? input.driveFileId;
+  const driveFileId = input.driveFileId ?? storageKey;
+
+  if (!storageKey || !driveFileId) {
+    throw new Error('Missing storage identity');
+  }
+
+  return { driveFileId, storageProvider, storageKey };
+}
+
+function storageIdentityKey(row: {
+  drive_file_id: string;
+  storage_provider?: StorageProvider | null;
+  storage_key?: string | null;
+}): string {
+  return `${row.storage_provider ?? 'google_drive'}:${row.storage_key ?? row.drive_file_id}`;
+}
+
+type StorageFilterBuilder<T> = T & {
+  eq: (column: string, value: string) => StorageFilterBuilder<T>;
+};
+
+function applyStorageFilter<T extends { eq: (column: string, value: string) => T }>(
+  query: T,
+  identity: { driveFileId: string; storageProvider: StorageProvider; storageKey: string }
+): T {
+  const builder = query as StorageFilterBuilder<T>;
+
+  return builder
+    .eq('storage_provider', identity.storageProvider)
+    .eq('storage_key', identity.storageKey) as T;
+}
+
+export async function mediaUploadExists(input: StorageIdentityInput | string): Promise<boolean> {
+  const identity = resolveStorageIdentity(input);
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
+  const query = supabase
     .from('media_uploads')
-    .select('id')
-    .eq('drive_file_id', driveFileId)
-    .maybeSingle();
+    .select('id');
+  const { data, error } = await applyStorageFilter(query, identity).maybeSingle();
 
   if (error) {
     throw new Error(`Failed to check media upload: ${error.message}`);
@@ -60,15 +120,20 @@ export async function insertMediaUploadsBatch(inputs: InsertMediaUploadInput[]):
   if (inputs.length === 0) return 0;
 
   const supabase = getSupabaseAdmin();
-  const rows = inputs.map((input) => ({
-    drive_file_id: input.driveFileId,
-    file_name: input.fileName,
-    guest_name: input.guestName ?? null,
-    mime_type: input.mimeType ?? null,
-    is_video: input.isVideo,
-    file_size: input.fileSize ?? null,
-    taken_at: normalizeTimestamp(input.takenAt),
-  }));
+  const rows = inputs.map((input) => {
+    const identity = resolveStorageIdentity(input);
+    return {
+      drive_file_id: identity.driveFileId,
+      storage_provider: identity.storageProvider,
+      storage_key: identity.storageKey,
+      file_name: input.fileName,
+      guest_name: input.guestName ?? null,
+      mime_type: input.mimeType ?? null,
+      is_video: input.isVideo,
+      file_size: input.fileSize ?? null,
+      taken_at: normalizeTimestamp(input.takenAt),
+    };
+  });
 
   const { data, error } = await supabase.from('media_uploads').insert(rows).select('id');
 
@@ -111,11 +176,14 @@ export async function updateTakenAtBatch(
 }
 
 export async function insertMediaUpload(input: InsertMediaUploadInput): Promise<MediaUploadRow> {
+  const identity = resolveStorageIdentity(input);
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from('media_uploads')
     .insert({
-      drive_file_id: input.driveFileId,
+      drive_file_id: identity.driveFileId,
+      storage_provider: identity.storageProvider,
+      storage_key: identity.storageKey,
       file_name: input.fileName,
       guest_name: input.guestName ?? null,
       mime_type: input.mimeType ?? null,
@@ -145,7 +213,7 @@ export async function patchMediaUpload(
 
   const { data: row, error: fetchError } = await supabase
     .from('media_uploads')
-    .select('drive_file_id')
+    .select('drive_file_id, storage_provider, storage_key')
     .eq('id', id)
     .maybeSingle();
 
@@ -175,10 +243,15 @@ export async function patchMediaUpload(
 
   if (updates.takenAt !== undefined) {
     const normalized = updates.takenAt === null ? null : normalizeTimestamp(updates.takenAt);
-    const { error: curatedError } = await supabase
+    const identity = resolveStorageIdentity({
+      driveFileId: row.drive_file_id,
+      storageProvider: row.storage_provider,
+      storageKey: row.storage_key,
+    });
+    const query = supabase
       .from('curated_gallery')
-      .update({ taken_at: normalized })
-      .eq('drive_file_id', row.drive_file_id);
+      .update({ taken_at: normalized });
+    const { error: curatedError } = await applyStorageFilter(query, identity);
 
     if (curatedError) {
       throw new Error(`Failed to sync curated taken date: ${curatedError.message}`);
@@ -197,7 +270,7 @@ export async function patchMediaUploadsBulk(
 
   const { data: rows, error: fetchError } = await supabase
     .from('media_uploads')
-    .select('id, drive_file_id')
+    .select('id, drive_file_id, storage_provider, storage_key')
     .in('id', ids);
 
   if (fetchError) {
@@ -218,12 +291,22 @@ export async function patchMediaUploadsBulk(
     throw new Error(`Failed to update media uploads: ${error.message}`);
   }
 
-  const driveFileIds = [...new Set((rows ?? []).map((row) => row.drive_file_id))];
-  if (driveFileIds.length > 0) {
-    const { error: curatedError } = await supabase
+  const identities = new Map(
+    (rows ?? []).map((row) => [
+      storageIdentityKey(row),
+      resolveStorageIdentity({
+        driveFileId: row.drive_file_id,
+        storageProvider: row.storage_provider,
+        storageKey: row.storage_key,
+      }),
+    ])
+  );
+
+  for (const identity of identities.values()) {
+    const query = supabase
       .from('curated_gallery')
-      .update({ taken_at: normalized })
-      .in('drive_file_id', driveFileIds);
+      .update({ taken_at: normalized });
+    const { error: curatedError } = await applyStorageFilter(query, identity);
 
     if (curatedError) {
       throw new Error(`Failed to sync curated taken dates: ${curatedError.message}`);
@@ -250,14 +333,19 @@ export async function fetchMediaUploads(limit = 200): Promise<MediaUploadRow[]> 
 
 export async function insertCuratedItem(input: {
   driveFileId: string;
+  storageProvider?: StorageProvider;
+  storageKey?: string;
   caption?: string | null;
   sortOrder?: number;
   isVideo?: boolean;
   takenAt?: string | null;
 }): Promise<void> {
+  const identity = resolveStorageIdentity(input);
   const supabase = getSupabaseAdmin();
   const { error } = await supabase.from('curated_gallery').insert({
-    drive_file_id: input.driveFileId,
+    drive_file_id: identity.driveFileId,
+    storage_provider: identity.storageProvider,
+    storage_key: identity.storageKey,
     caption: input.caption ?? null,
     sort_order: input.sortOrder ?? 0,
     is_video: input.isVideo ?? false,
@@ -277,7 +365,7 @@ export async function deleteMediaUploadCompletely(id: string): Promise<void> {
 
   const { data: row, error: fetchError } = await supabase
     .from('media_uploads')
-    .select('drive_file_id')
+    .select('drive_file_id, storage_provider, storage_key')
     .eq('id', id)
     .maybeSingle();
 
@@ -289,12 +377,22 @@ export async function deleteMediaUploadCompletely(id: string): Promise<void> {
     throw new Error('Media upload not found');
   }
 
-  await deleteDriveFile(row.drive_file_id);
+  const identity = resolveStorageIdentity({
+    driveFileId: row.drive_file_id,
+    storageProvider: row.storage_provider,
+    storageKey: row.storage_key,
+  });
 
-  const { error: curatedError } = await supabase
+  if (identity.storageProvider === 'r2') {
+    await deleteR2Object(identity.storageKey);
+  } else {
+    await deleteDriveFile(identity.driveFileId);
+  }
+
+  const curatedQuery = supabase
     .from('curated_gallery')
-    .delete()
-    .eq('drive_file_id', row.drive_file_id);
+    .delete();
+  const { error: curatedError } = await applyStorageFilter(curatedQuery, identity);
 
   if (curatedError) {
     throw new Error(`Failed to remove curated entry: ${curatedError.message}`);

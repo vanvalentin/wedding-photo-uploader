@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Premium mobile-first wedding guest photo & video uploader for Google Drive",
+  "description": "Premium mobile-first wedding guest photo & video uploader for Cloudflare R2 or Google Drive",
   "scripts": {
     "dev": "concurrently -n server,client -c blue,magenta \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
     "dev:vercel": "vercel dev",
@@ -11,9 +11,12 @@
     "build:all": "npm run build --prefix client && npm run build --prefix server",
     "start": "npm run start --prefix server",
     "install:all": "npm install --prefix server && npm install --prefix client",
-    "import-drive": "tsx scripts/import-drive.ts"
+    "import-drive": "tsx scripts/import-drive.ts",
+    "migrate-drive-to-r2": "tsx scripts/migrate-drive-to-r2.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1072.0",
+    "@aws-sdk/s3-request-presigner": "^3.1072.0",
     "@supabase/supabase-js": "^2.49.8",
     "dotenv": "^16.4.7",
     "google-auth-library": "^9.15.1",
