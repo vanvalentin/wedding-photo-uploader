@@ -22,6 +22,7 @@ uploadRouter.post('/init', async (req, res) => {
     storageProvider: result.storageProvider,
     storageKey: result.storageKey,
     uploadMethod: result.uploadMethod,
+    driveMirror: result.driveMirror,
   });
 });
 

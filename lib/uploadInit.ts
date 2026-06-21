@@ -41,6 +41,12 @@ export type UploadInitSuccess = {
   storageProvider: StorageProvider;
   storageKey?: string;
   uploadMethod: 'drive_resumable' | 'single_put';
+  driveMirror?: {
+    sessionUri: string;
+    fileName: string;
+    storageProvider: 'google_drive';
+    uploadMethod: 'drive_resumable';
+  };
 };
 
 export type UploadInitError = {
@@ -67,11 +73,19 @@ export async function processUploadInit(body: unknown): Promise<UploadInitSucces
 
   try {
     if (config.storageProvider === 'r2') {
-      const target = await createPresignedR2Upload({
-        fileName: finalFileName,
-        mimeType,
-        guestName,
-      });
+      const [target, driveMirror] = await Promise.all([
+        createPresignedR2Upload({
+          fileName: finalFileName,
+          mimeType,
+          guestName,
+        }),
+        createResumableUploadSession({
+          fileName: finalFileName,
+          mimeType,
+          fileSize,
+          guestName,
+        }),
+      ]);
 
       return {
         ok: true,
@@ -80,6 +94,12 @@ export async function processUploadInit(body: unknown): Promise<UploadInitSucces
         storageProvider: 'r2',
         storageKey: target.objectKey,
         uploadMethod: 'single_put',
+        driveMirror: {
+          sessionUri: driveMirror.sessionUri,
+          fileName: driveMirror.fileName,
+          storageProvider: 'google_drive',
+          uploadMethod: 'drive_resumable',
+        },
       };
     }
 
