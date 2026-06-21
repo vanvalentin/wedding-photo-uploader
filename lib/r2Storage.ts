@@ -29,15 +29,24 @@ function getR2Client(): S3Client {
   return s3Client;
 }
 
+function toAsciiSafe(value: string): string {
+  return value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+}
+
 function safeKeySegment(value: string): string {
   return (
-    value
+    toAsciiSafe(value)
       .trim()
       .replace(/[<>:"/\\|?*\x00-\x1f]/g, '_')
       .replace(/\s+/g, '_')
       .replace(/_+/g, '_')
       .slice(0, 220) || 'upload'
   );
+}
+
+function safeMetadataValue(value: string): string {
+  const ascii = toAsciiSafe(value);
+  return /^[\x20-\x7E]*$/.test(ascii) ? ascii : encodeURIComponent(value);
 }
 
 export const R2_UPLOAD_PREFIX = 'uploads';
@@ -135,9 +144,9 @@ export async function putR2Object(options: {
 }): Promise<void> {
   const r2 = requireR2Config();
   const metadata = Object.fromEntries(
-    Object.entries(options.metadata ?? {}).filter((entry): entry is [string, string] =>
-      Boolean(entry[1])
-    )
+    Object.entries(options.metadata ?? {})
+      .filter((entry): entry is [string, string] => Boolean(entry[1]))
+      .map(([key, value]) => [key, safeMetadataValue(value)])
   );
 
   await getR2Client().send(
