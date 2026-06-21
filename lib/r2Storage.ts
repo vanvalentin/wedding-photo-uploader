@@ -39,12 +39,13 @@ function safeKeySegment(value: string): string {
   );
 }
 
-function buildObjectKey(fileName: string): string {
+function buildObjectKey(fileName: string, keyPrefix?: string): string {
   const now = new Date();
   const year = String(now.getUTCFullYear());
   const month = String(now.getUTCMonth() + 1).padStart(2, '0');
   const day = String(now.getUTCDate()).padStart(2, '0');
-  return `uploads/${year}/${month}/${day}/${randomUUID()}-${safeKeySegment(fileName)}`;
+  const prefix = keyPrefix ? `${keyPrefix.replace(/\/+$/, '')}/` : 'uploads/';
+  return `${prefix}${year}/${month}/${day}/${randomUUID()}-${safeKeySegment(fileName)}`;
 }
 
 export function buildMigratedDriveObjectKey(driveFileId: string, fileName: string): string {
@@ -61,9 +62,10 @@ export async function createPresignedR2Upload(options: {
   fileName: string;
   mimeType: string;
   guestName?: string;
+  keyPrefix?: string;
 }): Promise<PresignedR2Upload> {
   const r2 = requireR2Config();
-  const objectKey = buildObjectKey(options.fileName);
+  const objectKey = buildObjectKey(options.fileName, options.keyPrefix);
   const metadata: Record<string, string> = {
     original_name: options.fileName,
   };
