@@ -1,9 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { z } from 'zod';
-import { verifyAdminSecret, isAdminConfigured } from '../../lib/adminAuth.js';
-import { config } from '../../lib/config.js';
-import { createPresignedR2Upload } from '../../lib/r2Storage.js';
-import { createResumableUploadSession } from '../../lib/googleDrive.js';
+import { verifyAdminSecret, isAdminConfigured } from '../../../lib/adminAuth.js';
+import { config } from '../../../lib/config.js';
+import { createPresignedR2Upload } from '../../../lib/r2Storage.js';
+import { createResumableUploadSession } from '../../../lib/googleDrive.js';
 
 const initSchema = z.object({
   albumId: z.string().uuid(),
