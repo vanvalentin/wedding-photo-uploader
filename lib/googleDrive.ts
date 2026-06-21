@@ -227,12 +227,17 @@ export async function fetchDrivePreview(fileId: string): Promise<Response> {
   return fetchDriveThumbnailSized(fileId, DEFAULT_PREVIEW_SIZE);
 }
 
-export async function fetchDriveMedia(fileId: string): Promise<Response> {
+export async function fetchDriveMedia(fileId: string, range?: string): Promise<Response> {
   const accessToken = await getAccessToken();
+  const headers: Record<string, string> = { Authorization: `Bearer ${accessToken}` };
+
+  if (range) {
+    headers.Range = range;
+  }
 
   return fetch(
     `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
+    { headers }
   );
 }
 
