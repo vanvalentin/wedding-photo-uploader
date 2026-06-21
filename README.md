@@ -1,13 +1,14 @@
 # Wedding Media Uploader
 
-A premium, mobile-first web application that lets wedding guests upload photos and videos directly to Cloudflare R2 (recommended) or Google Drive — no login required.
+A premium, mobile-first web application that lets wedding guests upload photos and videos directly to Cloudflare R2 (recommended) with a browser-direct Google Drive mirror, or to Google Drive legacy mode — no login required.
 
-Guests can optionally identify themselves, preview their media in a queue, and upload large files directly to object storage. R2 uploads use presigned browser `PUT` URLs; the legacy Google Drive mode still uses Drive's **Resumable Upload** API.
+Guests can optionally identify themselves, preview their media in a queue, and upload large files directly to object storage. R2 uploads use presigned browser `PUT` URLs and are mirrored to Drive with Drive's **Resumable Upload** API; the legacy Google Drive mode still uploads directly to Drive only.
 
 ## Features
 
 - **Anonymous uploads** — no authentication for guests
 - **Cloudflare R2 destination** — cost-effective storage for larger website galleries
+- **Google Drive mirror for R2 uploads** — guest file bytes go browser-to-Drive, not through Vercel
 - **Google Drive fallback** — legacy Drive mode is still available
 - **Direct-to-storage uploads** — file bytes do not pass through your server
 - **Bilingual UI** — English & French with a native EN / FR toggle
@@ -29,17 +30,23 @@ Guests can optionally identify themselves, preview their media in a queue, and u
 │  (React)    │ ◄── presigned URL + metadata ─ │  Vercel serverless)│
 └──────┬──────┘                                └────────┬─────────┘
        │                                              │
-       │  PUT file directly                           │ R2 credentials
+       │  PUT file directly                           │ R2 + Drive credentials
        ▼                                              ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    Cloudflare R2 bucket                       │
 │                  (target bucket: R2_BUCKET_NAME)              │
 └─────────────────────────────────────────────────────────────┘
+       │
+       │  resumable upload directly
+       ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 Google Drive Shared Drive mirror              │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-1. The backend signs an R2 `PUT` URL and returns the **upload URL** plus object key.
-2. The frontend `PUT`s the file directly to R2 — file bytes never pass through your server.
-3. The backend verifies the R2 object and records metadata in Supabase.
+1. The backend signs an R2 `PUT` URL and starts a Google Drive resumable session.
+2. The frontend uploads the file directly to R2 and directly to Drive — file bytes never pass through your server or Vercel Functions.
+3. The backend verifies the R2 object and records R2 metadata in Supabase, so gallery serving stays R2-backed.
 4. Optional guest names are prefixed to filenames (e.g. `Marie_photo.jpg`).
 
 ## Required Environment Variables
@@ -54,9 +61,9 @@ Copy `.env.example` to `.env` in the project root (or set these in Vercel):
 | `R2_SECRET_ACCESS_KEY` | R2 | R2 API token secret |
 | `R2_BUCKET_NAME` | R2 | Destination R2 bucket name |
 | `R2_UPLOAD_URL_EXPIRES_IN_SECONDS` | No | Presigned upload URL lifetime (default: `900`) |
-| `GOOGLE_DRIVE_FOLDER_ID` | Drive | Folder ID inside your **Shared Drive** |
-| `GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL` | Drive | Service account email from JSON key |
-| `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | Drive | Service account PEM private key |
+| `GOOGLE_DRIVE_FOLDER_ID` | R2 + Drive | Folder ID inside your **Shared Drive** |
+| `GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL` | R2 + Drive | Service account email from JSON key |
+| `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | R2 + Drive | Service account PEM private key |
 | `PORT` | No | Local Express port (default: `3001`) |
 | `CORS_ORIGIN` | No | Local dev CORS (default: `http://localhost:5173`) |
 | `VITE_API_URL` | No | Leave **empty** on Vercel |
@@ -121,7 +128,7 @@ R2_SECRET_ACCESS_KEY=...
 R2_BUCKET_NAME=...
 ```
 
-> **Google Drive:** The legacy Drive mode uses a **service account** with a Google Workspace **Shared Drive**. Personal Gmail / My Drive is not supported.
+> **Google Drive mirror:** R2 mode also requires the Google Drive variables above. The browser uploads the mirror directly to Drive, so the Drive file bytes do not use Vercel bandwidth or function duration. Personal Gmail / My Drive is not supported.
 
 ## Google Cloud Setup (Service Account + Shared Drive)
 
@@ -210,6 +217,9 @@ In **Project → Settings → Environment Variables**, add:
 | `R2_ACCESS_KEY_ID` | R2 token access key ID |
 | `R2_SECRET_ACCESS_KEY` | R2 token secret |
 | `R2_BUCKET_NAME` | R2 bucket name |
+| `GOOGLE_DRIVE_FOLDER_ID` | Shared Drive folder ID for browser-direct mirrors |
+| `GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL` | Service account email |
+| `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | Service account private key |
 
 > **Do not set `VITE_API_URL` on Vercel.** The frontend and API share the same domain, so requests go to `/api/upload/init` automatically.
 
@@ -236,7 +246,7 @@ Health check: `GET https://your-project.vercel.app/api/upload/health`
 ### Vercel free tier notes
 
 - Serverless functions are included on the free Hobby plan (sufficient for a wedding weekend)
-- Only the small `/api/upload/init` and `/api/upload/complete` calls hit your server — large file bytes go directly to R2
+- Only the small `/api/upload/init` and `/api/upload/complete` calls hit your server — large file bytes go directly to R2 and directly to Drive
 - Supabase is optional but recommended for upload registry, highlights, and admin curation
 
 ## Curated Highlights Gallery (optional)
@@ -342,7 +352,7 @@ Insert rows into `curated_gallery`:
 | `is_video` | `true` for videos |
 | `taken_at` | Optional capture date for sorting |
 
-Thumbnails and full-size previews are proxied through `/api/media/thumbnail` and `/api/media/view`.
+For R2-backed rows, set `R2_PUBLIC_URL` to a public Cloudflare R2 bucket/custom-domain URL so media loads directly from Cloudflare instead of Vercel. Google Drive-backed rows still use `/api/media/*` proxy routes because Drive access requires server-side credentials.
 
 If Supabase is not configured or the highlights table is empty, the Highlights section is hidden automatically.
 

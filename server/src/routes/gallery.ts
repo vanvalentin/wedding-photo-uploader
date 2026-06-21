@@ -11,6 +11,8 @@ import {
   parseMediaIdentifier,
   proxyMedia,
 } from '../../../lib/mediaProxy.js';
+import { getPublicR2ObjectUrl } from '../../../lib/mediaUrls.js';
+import { headR2Object } from '../../../lib/r2Storage.js';
 
 export const galleryRouter = Router();
 
@@ -94,6 +96,15 @@ mediaRouter.get('/thumbnail', async (req, res) => {
   }
 
   try {
+    const publicR2Url = identifier.provider === 'r2' ? getPublicR2ObjectUrl(identifier.key) : null;
+    if (publicR2Url) {
+      const metadata = await headR2Object(identifier.key);
+      if (!metadata.contentType.startsWith('video/')) {
+        res.redirect(307, publicR2Url);
+        return;
+      }
+    }
+
     const thumbnailResponse = await fetchMediaThumbnail(identifier);
     if (!thumbnailResponse.ok) {
       res.status(thumbnailResponse.status).json({ error: 'Failed to fetch thumbnail' });
@@ -123,6 +134,15 @@ mediaRouter.get('/preview', async (req, res) => {
   }
 
   try {
+    const publicR2Url = identifier.provider === 'r2' ? getPublicR2ObjectUrl(identifier.key) : null;
+    if (publicR2Url) {
+      const metadata = await headR2Object(identifier.key);
+      if (!metadata.contentType.startsWith('video/')) {
+        res.redirect(307, publicR2Url);
+        return;
+      }
+    }
+
     const previewResponse = await fetchMediaPreview(identifier);
     if (!previewResponse.ok) {
       res.status(previewResponse.status).json({ error: 'Failed to fetch preview' });
@@ -152,6 +172,11 @@ mediaRouter.get('/view', async (req, res) => {
   }
 
   const download = req.query.download === '1' || req.query.download === 'true';
+  const publicR2Url = identifier.provider === 'r2' ? getPublicR2ObjectUrl(identifier.key) : null;
+  if (publicR2Url) {
+    res.redirect(307, publicR2Url);
+    return;
+  }
 
   try {
     await proxyMedia(identifier, res, {

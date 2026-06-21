@@ -1,5 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { fetchMediaPreview, parseMediaIdentifier } from '../../lib/mediaProxy.js';
+import { getPublicR2ObjectUrl } from '../../lib/mediaUrls.js';
+import { headR2Object } from '../../lib/r2Storage.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
@@ -20,6 +22,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    const publicR2Url = identifier.provider === 'r2' ? getPublicR2ObjectUrl(identifier.key) : null;
+    if (publicR2Url) {
+      const metadata = await headR2Object(identifier.key);
+      if (!metadata.contentType.startsWith('video/')) {
+        res.redirect(307, publicR2Url);
+        return;
+      }
+    }
+
     const previewResponse = await fetchMediaPreview(identifier);
     if (!previewResponse.ok) {
       res.status(previewResponse.status).json({ error: 'Failed to fetch preview' });

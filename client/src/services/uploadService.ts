@@ -13,6 +13,12 @@ export interface InitUploadResponse {
     storageKey: string;
     mimeType: string;
   };
+  driveMirror?: {
+    sessionUri: string;
+    fileName: string;
+    storageProvider: 'google_drive';
+    uploadMethod: 'drive_resumable';
+  };
 }
 
 export async function initUploadSession(
@@ -137,12 +143,30 @@ async function uploadFileSinglePut(
   onProgress(100);
 }
 
+function scaleProgress(
+  start: number,
+  end: number,
+  onProgress: (progress: number) => void
+): (progress: number) => void {
+  return (progress) => {
+    const scaled = start + Math.round((progress / 100) * (end - start));
+    onProgress(Math.min(end, Math.max(start, scaled)));
+  };
+}
+
 export async function uploadFileToTarget(
   file: File,
   target: InitUploadResponse,
   mimeType: string,
   onProgress: (progress: number) => void
 ): Promise<void> {
+  if (target.uploadMethod === 'single_put' && target.driveMirror) {
+    await uploadFileSinglePut(file, target.sessionUri, mimeType, scaleProgress(0, 70, onProgress));
+    await uploadFileResumable(file, target.driveMirror.sessionUri, scaleProgress(70, 100, onProgress));
+    onProgress(100);
+    return;
+  }
+
   if (target.uploadMethod === 'single_put') {
     await uploadFileSinglePut(file, target.sessionUri, mimeType, onProgress);
     return;
