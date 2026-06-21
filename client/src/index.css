@@ -1172,6 +1172,13 @@ video {
   border-radius: var(--radius-md);
 }
 
+.admin-bulk-bar--selected {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  box-shadow: 0 4px 16px var(--color-shadow);
+}
+
 .admin-bulk-bar-selection {
   display: flex;
   flex-wrap: wrap;
@@ -1492,6 +1499,20 @@ video {
 @media (min-width: 480px) {
   .media-grid {
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+}
+
+@media (min-width: 768px) {
+  .gallery-page.app,
+  .highlights-page.app,
+  .admin-app {
+    max-width: 960px;
+  }
+
+  .gallery-page .media-grid,
+  .highlights-page .media-grid,
+  .admin-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
