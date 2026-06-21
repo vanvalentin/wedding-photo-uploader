@@ -967,7 +967,8 @@ video {
   transform: scale(1.04);
 }
 
-.highlights-page .header-top {
+.highlights-page .header-top,
+.gallery-page .header-top {
   justify-content: space-between;
   align-items: center;
 }

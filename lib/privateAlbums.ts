@@ -64,6 +64,34 @@ export function isPrivateAlbumsConfigured(): boolean {
   return isSupabaseAdminConfigured();
 }
 
+export function privateAlbumStorageIdentityKey(
+  storageProvider: StorageProvider,
+  storageKey: string
+): string {
+  return `${storageProvider}:${storageKey}`;
+}
+
+export async function fetchPrivateAlbumStorageIdentityKeys(): Promise<Set<string>> {
+  if (!isPrivateAlbumsConfigured()) {
+    return new Set();
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from('private_album_items')
+    .select('storage_provider, storage_key');
+
+  if (error) {
+    throw new Error(`Failed to fetch private album items: ${error.message}`);
+  }
+
+  return new Set(
+    (data ?? []).map((row) =>
+      privateAlbumStorageIdentityKey(row.storage_provider as StorageProvider, row.storage_key)
+    )
+  );
+}
+
 export async function listPrivateAlbums(): Promise<PrivateAlbumSummary[]> {
   const supabase = getSupabaseAdmin();
 

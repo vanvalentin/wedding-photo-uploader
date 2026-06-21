@@ -1,4 +1,5 @@
 import { fetchMediaUploads, type MediaUploadRow } from './mediaUploads.js';
+import { fetchPrivateAlbumStorageIdentityKeys } from './privateAlbums.js';
 import { fetchCuratedGallery, type CuratedGalleryRow } from './supabase.js';
 import type { StorageProvider } from './mediaUploads.js';
 import { toMediaThumbnailUrl, toMediaUrl } from './mediaUrls.js';
@@ -118,9 +119,15 @@ export function mapCuratedRow(
 }
 
 export async function getAdminUploadItems(): Promise<AdminMediaUploadItem[]> {
-  const [uploads, curated] = await Promise.all([fetchMediaUploads(), fetchCuratedGallery()]);
+  const [uploads, curated, albumStorageKeys] = await Promise.all([
+    fetchMediaUploads(),
+    fetchCuratedGallery(),
+    fetchPrivateAlbumStorageIdentityKeys(),
+  ]);
   const curatedDriveIds = new Set(curated.map((item) => storageIdentityKey(item)));
-  return uploads.map((row) => mapUploadRow(row, curatedDriveIds));
+  return uploads
+    .filter((row) => !albumStorageKeys.has(storageIdentityKey(row)))
+    .map((row) => mapUploadRow(row, curatedDriveIds));
 }
 
 export async function getAdminCuratedItems(): Promise<AdminCuratedItem[]> {

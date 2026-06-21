@@ -3,6 +3,7 @@ import {
   fetchPublicMediaUploads,
   isSupabaseConfigured,
 } from './supabase.js';
+import { fetchPrivateAlbumStorageIdentityKeys } from './privateAlbums.js';
 import { getDriveFileMetadata } from './googleDrive.js';
 import { headR2Object } from './r2Storage.js';
 import type { StorageProvider } from './mediaUploads.js';
@@ -139,27 +140,32 @@ export async function getAllMediaGalleryItems(): Promise<PublicMediaGalleryItem[
     return [];
   }
 
-  const rows = await fetchPublicMediaUploads();
+  const [rows, albumStorageKeys] = await Promise.all([
+    fetchPublicMediaUploads(),
+    fetchPrivateAlbumStorageIdentityKeys(),
+  ]);
 
-  return rows.map((row) => {
-    const identity = storageProvider(row);
-    return {
-      id: row.id,
-      driveFileId: row.drive_file_id,
-      storageProvider: identity.provider,
-      storageKey: identity.key,
-      fileName: row.file_name,
-      guestName: row.guest_name,
-      isVideo: row.is_video,
-      takenAt: row.taken_at,
-      uploadedAt: row.uploaded_at,
-      thumbnailUrl: toMediaThumbnailUrl(
-        identity.provider,
-        identity.key,
-        row.is_video,
-        thumbnailStorage(row)
-      ),
-      viewUrl: toMediaUrl('view', identity.provider, identity.key),
-    };
-  });
+  return rows
+    .filter((row) => !albumStorageKeys.has(storageIdentityKey(row)))
+    .map((row) => {
+      const identity = storageProvider(row);
+      return {
+        id: row.id,
+        driveFileId: row.drive_file_id,
+        storageProvider: identity.provider,
+        storageKey: identity.key,
+        fileName: row.file_name,
+        guestName: row.guest_name,
+        isVideo: row.is_video,
+        takenAt: row.taken_at,
+        uploadedAt: row.uploaded_at,
+        thumbnailUrl: toMediaThumbnailUrl(
+          identity.provider,
+          identity.key,
+          row.is_video,
+          thumbnailStorage(row)
+        ),
+        viewUrl: toMediaUrl('view', identity.provider, identity.key),
+      };
+    });
 }
