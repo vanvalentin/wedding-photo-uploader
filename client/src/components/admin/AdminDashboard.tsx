@@ -19,12 +19,17 @@ import { AdminTakenDateEditor } from './AdminTakenDateEditor';
 import { AdminBulkDateBar } from './AdminBulkDateBar';
 import { AdminAlbumsPanel } from './AdminAlbumsPanel';
 import {
+  buildAdminUploaderOptions,
+  buildAnonymousUploaderGroups,
   filterByReviewStatus,
+  filterByUploader,
   formatMediaDateLabel,
+  resolveUploaderLabel,
   sortByMediaDate,
   type AdminReviewFilter,
   type AdminSortDirection,
   type AdminSortField,
+  type AdminUploaderFilter,
 } from '../../utils/formatDateTime';
 
 interface AdminDashboardProps {
@@ -48,6 +53,7 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
   const [sortField, setSortField] = useState<AdminSortField>('taken');
   const [sortDirection, setSortDirection] = useState<AdminSortDirection>('desc');
   const [reviewFilter, setReviewFilter] = useState<AdminReviewFilter>('unreviewed');
+  const [uploaderFilter, setUploaderFilter] = useState<AdminUploaderFilter>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
   const loadData = useCallback(async (options?: { background?: boolean }) => {
@@ -89,9 +95,29 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
     [uploads, sortField, sortDirection]
   );
 
+  const anonymousUploaderGroups = useMemo(
+    () => buildAnonymousUploaderGroups(uploads),
+    [uploads]
+  );
+
+  const uploaderOptions = useMemo(
+    () => buildAdminUploaderOptions(uploads),
+    [uploads]
+  );
+
+  const uploaderFilterLabel = useMemo(
+    () => uploaderOptions.find((option) => option.value === uploaderFilter)?.label,
+    [uploaderOptions, uploaderFilter]
+  );
+
   const filteredUploads = useMemo(
-    () => filterByReviewStatus(sortedUploads, reviewFilter),
-    [sortedUploads, reviewFilter]
+    () =>
+      filterByUploader(
+        filterByReviewStatus(sortedUploads, reviewFilter),
+        uploaderFilter,
+        anonymousUploaderGroups
+      ),
+    [sortedUploads, reviewFilter, uploaderFilter, anonymousUploaderGroups]
   );
 
   const unreviewedCount = useMemo(
@@ -134,7 +160,7 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
   useEffect(() => {
     setPreviewIndex(null);
     setSelectedIds(new Set());
-  }, [tab, reviewFilter]);
+  }, [tab, reviewFilter, uploaderFilter]);
 
   const handleLogout = () => {
     clearAdminSecret();
@@ -350,6 +376,10 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
           showReviewFilter={tab === 'uploads'}
           reviewFilter={reviewFilter}
           onReviewFilterChange={setReviewFilter}
+          showUploaderFilter={tab === 'uploads'}
+          uploaderFilter={uploaderFilter}
+          onUploaderFilterChange={setUploaderFilter}
+          uploaderOptions={uploaderOptions}
         />
       )}
 
@@ -374,14 +404,19 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
           <div className="admin-grid">
           {filteredUploads.length === 0 ? (
             <p className="admin-empty">
-              {reviewFilter === 'unreviewed'
-                ? 'All uploads have been reviewed.'
-                : reviewFilter === 'reviewed'
-                  ? 'No reviewed uploads yet.'
-                  : 'No uploads registered yet. Use Import from Drive for existing folder photos, or wait for new guest uploads.'}
+              {uploaderFilter !== 'all'
+                ? `No uploads from "${uploaderFilterLabel ?? uploaderFilter}" match the current filters.`
+                : reviewFilter === 'unreviewed'
+                  ? 'All uploads have been reviewed.'
+                  : reviewFilter === 'reviewed'
+                    ? 'No reviewed uploads yet.'
+                    : 'No uploads registered yet. Use Import from Drive for existing folder photos, or wait for new guest uploads.'}
             </p>
           ) : (
-            filteredUploads.map((item) => (
+            filteredUploads.map((item) => {
+              const uploaderLabel = resolveUploaderLabel(item, anonymousUploaderGroups);
+
+              return (
               <article
                 key={item.id}
                 className={`admin-card${item.reviewed ? ' admin-card-reviewed' : ''}${selectedIds.has(item.id) ? ' admin-card-selected' : ''}`}
@@ -411,7 +446,7 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
                 </div>
                 <div className="admin-card-body">
                   <p className="admin-card-title">{item.fileName}</p>
-                  {item.guestName && <p className="admin-card-meta">By {item.guestName}</p>}
+                  {uploaderLabel && <p className="admin-card-meta">By {uploaderLabel}</p>}
                   <AdminTakenDateEditor
                     uploadId={item.id}
                     takenAt={item.takenAt}
@@ -452,7 +487,8 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
                   </div>
                 </div>
               </article>
-            ))
+              );
+            })
           )}
         </div>
         </>
