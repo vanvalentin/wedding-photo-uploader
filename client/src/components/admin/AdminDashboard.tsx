@@ -13,6 +13,7 @@ import {
   type AdminMediaUploadItem,
 } from '../../services/adminService';
 import { Lightbox } from '../Lightbox';
+import { GalleryMediaThumb } from '../GalleryMediaThumb';
 import { AdminSortBar } from './AdminSortBar';
 import { AdminTakenDateEditor } from './AdminTakenDateEditor';
 import { AdminBulkDateBar } from './AdminBulkDateBar';
@@ -379,8 +380,16 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
                     />
                   </label>
                   <button type="button" className="admin-card-preview" onClick={() => openPreview(item.id)}>
-                    <img src={item.thumbnailUrl} alt={item.fileName} loading="lazy" />
-                    {item.isVideo && <span className="video-badge" aria-hidden="true">▶</span>}
+                    <GalleryMediaThumb
+                      item={{
+                        id: item.id,
+                        previewUrl: item.thumbnailUrl,
+                        viewUrl: item.viewUrl,
+                        name: item.fileName,
+                        isVideo: item.isVideo,
+                      }}
+                      alt={item.fileName}
+                    />
                     {item.reviewed && <span className="admin-reviewed-badge">Reviewed</span>}
                   </button>
                 </div>
@@ -441,8 +450,16 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
             sortedCurated.map((item) => (
               <article key={item.id} className="admin-card">
                 <button type="button" className="admin-card-preview" onClick={() => openPreview(item.id)}>
-                  <img src={item.thumbnailUrl} alt={item.fileName ?? 'Highlight'} loading="lazy" />
-                  {item.isVideo && <span className="video-badge" aria-hidden="true">▶</span>}
+                  <GalleryMediaThumb
+                    item={{
+                      id: item.id,
+                      previewUrl: item.thumbnailUrl,
+                      viewUrl: item.viewUrl,
+                      name: item.fileName ?? 'Highlight',
+                      isVideo: item.isVideo,
+                    }}
+                    alt={item.fileName ?? 'Highlight'}
+                  />
                 </button>
                 <div className="admin-card-body">
                   <p className="admin-card-title">{item.fileName ?? item.driveFileId}</p>

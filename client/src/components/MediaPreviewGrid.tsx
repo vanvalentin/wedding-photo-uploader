@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { MediaPreview } from '../types';
 import { useI18n } from '../i18n/I18nContext';
 import { Lightbox } from './Lightbox';
+import { GalleryMediaThumb } from './GalleryMediaThumb';
 
 interface MediaPreviewGridProps {
   items: MediaPreview[];
@@ -63,19 +64,7 @@ export function MediaPreviewGrid({
               onClick={() => openPreview(item)}
               aria-label={item.name}
             >
-              {item.isVideo && item.previewUrl.startsWith('blob:') ? (
-                <>
-                  <video src={item.previewUrl} muted playsInline preload="metadata" />
-                  <span className="video-badge" aria-hidden="true">▶</span>
-                </>
-              ) : item.isVideo ? (
-                <>
-                  <img src={item.previewUrl} alt={item.name} loading="lazy" />
-                  <span className="video-badge" aria-hidden="true">▶</span>
-                </>
-              ) : (
-                <img src={item.previewUrl} alt={item.name} loading="lazy" />
-              )}
+              <GalleryMediaThumb item={item} />
             </button>
           </div>
         ))}

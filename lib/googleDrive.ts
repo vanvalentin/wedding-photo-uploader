@@ -162,31 +162,56 @@ function driveThumbnailUrl(thumbnailLink: string, maxSize: number): string {
   return `${thumbnailLink}=s${maxSize}`;
 }
 
+function generateVideoPlaceholderSvg(): string {
+  return [
+    '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">',
+    '<rect width="400" height="400" fill="#3d3a36"/>',
+    '<polygon points="165,135 165,265 285,200" fill="#f5f0e8" opacity="0.9"/>',
+    '</svg>',
+  ].join('');
+}
+
 async function fetchDriveThumbnailSized(
   fileId: string,
   maxSize: number,
   options: { allowFullMediaFallback?: boolean } = {}
 ): Promise<Response> {
   const { allowFullMediaFallback = false } = options;
-  const accessToken = await getAccessToken();
   const metadata = await getDriveFileMetadata(fileId);
 
   if (metadata.thumbnailLink) {
     const sizedUrl = driveThumbnailUrl(metadata.thumbnailLink, maxSize);
-    const thumbnailResponse = await fetch(sizedUrl, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    // thumbnailLink is a signed URL — fetching with OAuth often breaks it
+    let thumbnailResponse = await fetch(sizedUrl);
+
+    if (!thumbnailResponse.ok) {
+      const accessToken = await getAccessToken();
+      thumbnailResponse = await fetch(sizedUrl, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+    }
 
     if (thumbnailResponse.ok) {
-      return thumbnailResponse;
+      const contentType = thumbnailResponse.headers.get('Content-Type') ?? '';
+      if (contentType.startsWith('image/')) {
+        return thumbnailResponse;
+      }
     }
   }
 
   if (allowFullMediaFallback && metadata.mimeType.startsWith('image/')) {
+    const accessToken = await getAccessToken();
     return fetch(
       `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
+  }
+
+  if (metadata.mimeType.startsWith('video/')) {
+    return new Response(generateVideoPlaceholderSvg(), {
+      status: 200,
+      headers: { 'Content-Type': 'image/svg+xml; charset=utf-8' },
+    });
   }
 
   throw new Error('No thumbnail available for this file');

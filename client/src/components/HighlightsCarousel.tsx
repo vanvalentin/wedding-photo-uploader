@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { MediaPreview } from '../types';
 import { Lightbox } from './Lightbox';
+import { GalleryMediaThumb } from './GalleryMediaThumb';
 
 export const HIGHLIGHTS_CAROUSEL_SIZE = 16;
 
@@ -30,16 +31,7 @@ export function HighlightsCarousel({ items }: HighlightsCarouselProps) {
               onClick={() => openPreview(item.id)}
               aria-label={item.name}
             >
-              {item.isVideo ? (
-                <>
-                  <img src={item.previewUrl} alt="" loading="lazy" />
-                  <span className="video-badge" aria-hidden="true">
-                    ▶
-                  </span>
-                </>
-              ) : (
-                <img src={item.previewUrl} alt="" loading="lazy" />
-              )}
+              <GalleryMediaThumb item={item} alt="" />
             </button>
           ))}
         </div>
