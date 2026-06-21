@@ -3,8 +3,8 @@
  * R2 uploads and update Supabase metadata.
  *
  * Prerequisites:
- *   - .env with R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME
- *   - .env with SUPABASE_URL and SUPABASE_SECRET_KEY
+ *   - .env or .env.local with R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME
+ *   - .env or .env.local with SUPABASE_URL and SUPABASE_SECRET_KEY
  *   - Local ffmpeg on PATH for video thumbnails (or pass --skip-videos)
  *
  * Usage:
@@ -12,18 +12,27 @@
  *   npm run backfill-r2-thumbnails
  */
 
-import 'dotenv/config';
+import './loadEnv.js';
 import {
   backfillR2Thumbnails,
   type R2ThumbnailBackfillOptions,
 } from '../lib/r2ThumbnailBackfill.js';
+
+const BOOLEAN_FLAGS = new Set(['--dry-run', '--skip-videos', '--help', '-h']);
+const VALUE_FLAGS = new Set(['--limit']);
 
 function readFlagValue(args: string[], name: string): string | null {
   const prefixed = args.find((arg) => arg.startsWith(`${name}=`));
   if (prefixed) return prefixed.slice(name.length + 1);
 
   const index = args.indexOf(name);
-  if (index >= 0) return args[index + 1] ?? null;
+  if (index >= 0) {
+    const value = args[index + 1] ?? null;
+    if (!value || value.startsWith('--')) {
+      throw new Error(`${name} requires a value`);
+    }
+    return value;
+  }
 
   return null;
 }
@@ -55,11 +64,24 @@ Recommended first run:
 `);
 }
 
+function assertKnownFlags(args: string[]): void {
+  for (const arg of args) {
+    if (!arg.startsWith('-')) continue;
+
+    const flag = arg.includes('=') ? arg.slice(0, arg.indexOf('=')) : arg;
+    if (!BOOLEAN_FLAGS.has(flag) && !VALUE_FLAGS.has(flag)) {
+      throw new Error(`Unknown option: ${flag}`);
+    }
+  }
+}
+
 function parseOptions(args: string[]): R2ThumbnailBackfillOptions {
   if (args.includes('--help') || args.includes('-h')) {
     printHelp();
     process.exit(0);
   }
+
+  assertKnownFlags(args);
 
   return {
     dryRun: args.includes('--dry-run'),
@@ -68,9 +90,8 @@ function parseOptions(args: string[]): R2ThumbnailBackfillOptions {
   };
 }
 
-const options = parseOptions(process.argv.slice(2));
-
 try {
+  const options = parseOptions(process.argv.slice(2));
   const result = await backfillR2Thumbnails({
     ...options,
     onProgress(event) {

@@ -11,7 +11,7 @@
  *   npm run flatten-r2-keys
  */
 
-import 'dotenv/config';
+import './loadEnv.js';
 import {
   flattenR2UploadKeys,
   type FlattenR2KeysOptions,
