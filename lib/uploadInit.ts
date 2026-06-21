@@ -41,6 +41,11 @@ export type UploadInitSuccess = {
   storageProvider: StorageProvider;
   storageKey?: string;
   uploadMethod: 'drive_resumable' | 'single_put';
+  thumbnailUpload?: {
+    uploadUrl: string;
+    storageKey: string;
+    mimeType: string;
+  };
   driveMirror?: {
     sessionUri: string;
     fileName: string;
@@ -94,6 +99,13 @@ export async function processUploadInit(body: unknown): Promise<UploadInitSucces
         storageProvider: 'r2',
         storageKey: target.objectKey,
         uploadMethod: 'single_put',
+        thumbnailUpload: target.thumbnailUpload
+          ? {
+              uploadUrl: target.thumbnailUpload.uploadUrl,
+              storageKey: target.thumbnailUpload.objectKey,
+              mimeType: target.thumbnailUpload.mimeType,
+            }
+          : undefined,
         driveMirror: {
           sessionUri: driveMirror.sessionUri,
           fileName: driveMirror.fileName,

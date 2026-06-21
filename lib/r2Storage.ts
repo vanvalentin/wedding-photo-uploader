@@ -50,6 +50,7 @@ function safeMetadataValue(value: string): string {
 }
 
 export const R2_UPLOAD_PREFIX = 'uploads';
+export const R2_THUMBNAIL_PREFIX = 'thumbnails';
 
 export function buildFlatUploadKey(fileName: string, keyPrefix?: string): string {
   const key = `${randomUUID()}-${safeKeySegment(fileName)}`;
@@ -57,6 +58,12 @@ export function buildFlatUploadKey(fileName: string, keyPrefix?: string): string
     return `${keyPrefix.replace(/\/+$/, '')}/${key}`;
   }
   return `${R2_UPLOAD_PREFIX}/${key}`;
+}
+
+export function buildThumbnailKey(objectKey: string): string {
+  const leaf = objectKey.split('/').pop() ?? objectKey;
+  const withoutExtension = leaf.replace(/\.[^.]*$/, '') || safeKeySegment(leaf);
+  return `${R2_THUMBNAIL_PREFIX}/${withoutExtension}.jpg`;
 }
 
 /** @deprecated Use buildFlatUploadKey */
@@ -74,6 +81,11 @@ export interface PresignedR2Upload {
   uploadUrl: string;
   objectKey: string;
   fileName: string;
+  thumbnailUpload?: {
+    uploadUrl: string;
+    objectKey: string;
+    mimeType: string;
+  };
 }
 
 export async function createPresignedR2Upload(options: {
@@ -102,11 +114,28 @@ export async function createPresignedR2Upload(options: {
   const uploadUrl = await getSignedUrl(getR2Client(), command, {
     expiresIn: r2.uploadUrlExpiresInSeconds,
   });
+  const thumbnailObjectKey = buildThumbnailKey(objectKey);
+  const thumbnailCommand = new PutObjectCommand({
+    Bucket: r2.bucketName,
+    Key: thumbnailObjectKey,
+    ContentType: 'image/jpeg',
+    Metadata: {
+      original_key: safeMetadataValue(objectKey),
+    },
+  });
+  const thumbnailUploadUrl = await getSignedUrl(getR2Client(), thumbnailCommand, {
+    expiresIn: r2.uploadUrlExpiresInSeconds,
+  });
 
   return {
     uploadUrl,
     objectKey,
     fileName: options.fileName,
+    thumbnailUpload: {
+      uploadUrl: thumbnailUploadUrl,
+      objectKey: thumbnailObjectKey,
+      mimeType: 'image/jpeg',
+    },
   };
 }
 

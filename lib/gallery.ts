@@ -47,6 +47,26 @@ function storageProvider(row: {
   };
 }
 
+function storageIdentityKey(row: {
+  storage_provider?: StorageProvider | null;
+  storage_key?: string | null;
+  drive_file_id: string;
+}): string {
+  const identity = storageProvider(row);
+  return `${identity.provider}:${identity.key}`;
+}
+
+function thumbnailStorage(row: {
+  thumbnail_storage_provider?: StorageProvider | null;
+  thumbnail_storage_key?: string | null;
+}): { provider: StorageProvider; key: string } | undefined {
+  if (!row.thumbnail_storage_provider || !row.thumbnail_storage_key) return undefined;
+  return {
+    provider: row.thumbnail_storage_provider,
+    key: row.thumbnail_storage_key,
+  };
+}
+
 export function sortByTakenDateDesc<T extends { takenAt: string | null }>(items: T[]): T[] {
   return [...items].sort((a, b) => {
     const aTime = a.takenAt ? new Date(a.takenAt).getTime() : null;
@@ -64,7 +84,10 @@ export async function getCuratedGalleryItems(): Promise<CuratedGalleryItem[]> {
     return [];
   }
 
-  const rows = await fetchCuratedGallery();
+  const [rows, uploads] = await Promise.all([fetchCuratedGallery(), fetchPublicMediaUploads()]);
+  const thumbnailsByStorageIdentity = new Map(
+    uploads.map((row) => [storageIdentityKey(row), thumbnailStorage(row)])
+  );
   const items: CuratedGalleryItem[] = [];
 
   for (const row of rows) {
@@ -95,7 +118,12 @@ export async function getCuratedGalleryItems(): Promise<CuratedGalleryItem[]> {
         isVideo,
         takenAt,
         name: 'name' in metadata ? metadata.name : metadata.fileName,
-        thumbnailUrl: toMediaThumbnailUrl(identity.provider, identity.key, isVideo),
+        thumbnailUrl: toMediaThumbnailUrl(
+          identity.provider,
+          identity.key,
+          isVideo,
+          thumbnailsByStorageIdentity.get(storageIdentityKey(row))
+        ),
         viewUrl: toMediaUrl('view', identity.provider, identity.key),
       });
     } catch (error) {
@@ -125,7 +153,12 @@ export async function getAllMediaGalleryItems(): Promise<PublicMediaGalleryItem[
       isVideo: row.is_video,
       takenAt: row.taken_at,
       uploadedAt: row.uploaded_at,
-      thumbnailUrl: toMediaThumbnailUrl(identity.provider, identity.key, row.is_video),
+      thumbnailUrl: toMediaThumbnailUrl(
+        identity.provider,
+        identity.key,
+        row.is_video,
+        thumbnailStorage(row)
+      ),
       viewUrl: toMediaUrl('view', identity.provider, identity.key),
     };
   });

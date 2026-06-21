@@ -5,7 +5,9 @@ import {
   initUploadSession,
   registerUploadComplete,
   uploadFileToTarget,
+  uploadThumbnailToTarget,
 } from '../services/uploadService';
+import { generateMediaThumbnail } from '../utils/thumbnailGenerator';
 
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -38,6 +40,24 @@ async function uploadQueueItem(
     updateFile(item.id, { progress });
   });
 
+  let uploadedThumbnail:
+    | { storageKey: string; mimeType: string; fileSize: number }
+    | undefined;
+
+  if (uploadTarget.thumbnailUpload) {
+    try {
+      const thumbnail = await generateMediaThumbnail(item.file, item.isVideo);
+      await uploadThumbnailToTarget(thumbnail, uploadTarget.thumbnailUpload);
+      uploadedThumbnail = {
+        storageKey: uploadTarget.thumbnailUpload.storageKey,
+        mimeType: uploadTarget.thumbnailUpload.mimeType,
+        fileSize: thumbnail.size,
+      };
+    } catch (error) {
+      console.warn('Thumbnail generation failed (upload still succeeded):', error);
+    }
+  }
+
   try {
     await registerUploadComplete({
       fileName: uploadTarget.fileName,
@@ -47,6 +67,9 @@ async function uploadQueueItem(
       isVideo: item.isVideo,
       storageProvider: uploadTarget.storageProvider,
       storageKey: uploadTarget.storageKey,
+      thumbnailStorageKey: uploadedThumbnail?.storageKey,
+      thumbnailMimeType: uploadedThumbnail?.mimeType,
+      thumbnailFileSize: uploadedThumbnail?.fileSize,
     });
   } catch (error) {
     console.warn('Upload registry failed (upload still succeeded):', error);

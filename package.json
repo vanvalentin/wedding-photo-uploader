@@ -13,7 +13,8 @@
     "install:all": "npm install --prefix server && npm install --prefix client",
     "import-drive": "tsx scripts/import-drive.ts",
     "migrate-drive-to-r2": "tsx scripts/migrate-drive-to-r2.ts",
-    "flatten-r2-keys": "tsx scripts/flatten-r2-keys.ts"
+    "flatten-r2-keys": "tsx scripts/flatten-r2-keys.ts",
+    "backfill-r2-thumbnails": "tsx scripts/backfill-r2-thumbnails.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1072.0",
@@ -21,6 +22,7 @@
     "@supabase/supabase-js": "^2.49.8",
     "dotenv": "^16.4.7",
     "google-auth-library": "^9.15.1",
+    "sharp": "^0.35.2",
     "zod": "^3.24.2"
   },
   "devDependencies": {

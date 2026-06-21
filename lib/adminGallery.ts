@@ -56,6 +56,17 @@ function storageIdentityKey(row: {
   return `${identity.provider}:${identity.key}`;
 }
 
+function thumbnailStorage(row: {
+  thumbnail_storage_provider?: StorageProvider | null;
+  thumbnail_storage_key?: string | null;
+}): { provider: StorageProvider; key: string } | undefined {
+  if (!row.thumbnail_storage_provider || !row.thumbnail_storage_key) return undefined;
+  return {
+    provider: row.thumbnail_storage_provider,
+    key: row.thumbnail_storage_key,
+  };
+}
+
 export function mapUploadRow(
   row: MediaUploadRow,
   curatedDriveIds: Set<string>
@@ -73,14 +84,22 @@ export function mapUploadRow(
     fileSize: row.file_size,
     takenAt: row.taken_at,
     uploadedAt: row.uploaded_at,
-    thumbnailUrl: toMediaThumbnailUrl(identity.provider, identity.key, row.is_video),
+    thumbnailUrl: toMediaThumbnailUrl(
+      identity.provider,
+      identity.key,
+      row.is_video,
+      thumbnailStorage(row)
+    ),
     viewUrl: toMediaUrl('view', identity.provider, identity.key),
     isCurated: curatedDriveIds.has(storageIdentityKey(row)),
     reviewed: row.reviewed ?? false,
   };
 }
 
-export function mapCuratedRow(row: CuratedGalleryRow): AdminCuratedItem {
+export function mapCuratedRow(
+  row: CuratedGalleryRow,
+  thumbnail?: { provider: StorageProvider; key: string }
+): AdminCuratedItem {
   const identity = getStorageIdentity(row);
   return {
     id: row.id,
@@ -93,7 +112,7 @@ export function mapCuratedRow(row: CuratedGalleryRow): AdminCuratedItem {
     takenAt: row.taken_at,
     createdAt: row.created_at,
     fileName: null,
-    thumbnailUrl: toMediaThumbnailUrl(identity.provider, identity.key, row.is_video),
+    thumbnailUrl: toMediaThumbnailUrl(identity.provider, identity.key, row.is_video, thumbnail),
     viewUrl: toMediaUrl('view', identity.provider, identity.key),
   };
 }
@@ -108,8 +127,12 @@ export async function getAdminCuratedItems(): Promise<AdminCuratedItem[]> {
   const [curated, uploads] = await Promise.all([fetchCuratedGallery(), fetchMediaUploads()]);
   const uploadNames = new Map(uploads.map((row) => [storageIdentityKey(row), row.file_name]));
 
+  const uploadThumbnails = new Map(
+    uploads.map((row) => [storageIdentityKey(row), thumbnailStorage(row)])
+  );
+
   return curated.map((row) => ({
-    ...mapCuratedRow(row),
+    ...mapCuratedRow(row, uploadThumbnails.get(storageIdentityKey(row))),
     fileName: uploadNames.get(storageIdentityKey(row)) ?? null,
   }));
 }
