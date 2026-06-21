@@ -1,5 +1,3 @@
-import { Readable } from 'node:stream';
-import type { ReadableStream as NodeReadableStream } from 'node:stream/web';
 import { fetchDriveMedia } from './googleDrive.js';
 import { buildMigratedDriveObjectKey, headR2Object, putR2Object } from './r2Storage.js';
 import { getSupabaseAdmin, isSupabaseAdminConfigured } from './supabase.js';
@@ -65,12 +63,6 @@ interface DriveMediaUploadRow {
 }
 
 const DEFAULT_BATCH_SIZE = 25;
-
-function parseContentLength(value: string | null, fallback: number | null): number | null {
-  if (!value) return fallback;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
-}
 
 function isMissingR2ObjectError(error: unknown): boolean {
   const candidate = error as {
@@ -170,17 +162,16 @@ async function copyDriveRowToR2(row: DriveMediaUploadRow): Promise<{
     throw new Error(`Drive download failed (${driveResponse.status}): ${body}`);
   }
 
-  if (!driveResponse.body) {
+  const bodyBuffer = Buffer.from(await driveResponse.arrayBuffer());
+  if (bodyBuffer.length === 0) {
     throw new Error('Drive returned an empty response body');
   }
 
   await putR2Object({
     key: storageKey,
-    body: Readable.fromWeb(
-      driveResponse.body as unknown as NodeReadableStream<Uint8Array>
-    ),
+    body: bodyBuffer,
     contentType: driveResponse.headers.get('content-type') ?? row.mime_type,
-    contentLength: parseContentLength(driveResponse.headers.get('content-length'), row.file_size),
+    contentLength: bodyBuffer.length,
     metadata: {
       original_name: row.file_name,
       migrated_from: 'google_drive',
