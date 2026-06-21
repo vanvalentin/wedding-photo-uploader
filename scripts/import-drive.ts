@@ -9,7 +9,7 @@
  *   npm run import-drive
  */
 
-import 'dotenv/config';
+import './loadEnv.js';
 import { importDriveFolderToRegistry } from '../lib/driveImport.js';
 
 try {

@@ -13,7 +13,7 @@
  *   npm run migrate-drive-to-r2
  */
 
-import 'dotenv/config';
+import './loadEnv.js';
 import {
   migrateDriveUploadsToR2,
   type DriveToR2MigrationOptions,
