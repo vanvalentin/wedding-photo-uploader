@@ -17,6 +17,7 @@ import { GalleryMediaThumb } from '../GalleryMediaThumb';
 import { AdminSortBar } from './AdminSortBar';
 import { AdminTakenDateEditor } from './AdminTakenDateEditor';
 import { AdminBulkDateBar } from './AdminBulkDateBar';
+import { AdminAlbumsPanel } from './AdminAlbumsPanel';
 import {
   filterByReviewStatus,
   formatMediaDateLabel,
@@ -31,7 +32,7 @@ interface AdminDashboardProps {
   onLogout: () => void;
 }
 
-type AdminTab = 'uploads' | 'curated';
+type AdminTab = 'uploads' | 'curated' | 'albums';
 
 export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
   const [tab, setTab] = useState<AdminTab>('uploads');
@@ -324,9 +325,18 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
         >
           Highlights ({curated.length})
         </button>
+        <button
+          type="button"
+          role="tab"
+          className={tab === 'albums' ? 'active' : ''}
+          aria-selected={tab === 'albums'}
+          onClick={() => setTab('albums')}
+        >
+          Private albums
+        </button>
       </div>
 
-      {!initialLoading && (
+      {!initialLoading && tab !== 'albums' && (
         <AdminSortBar
           sortField={sortField}
           sortDirection={sortDirection}
@@ -442,6 +452,10 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
           )}
         </div>
         </>
+      )}
+
+      {!initialLoading && tab === 'albums' && (
+        <AdminAlbumsPanel secret={secret} uploads={uploads} />
       )}
 
       {!initialLoading && tab === 'curated' && (

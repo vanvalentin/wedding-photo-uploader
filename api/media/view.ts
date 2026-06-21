@@ -6,6 +6,10 @@ function requestRange(req: VercelRequest): string | undefined {
   return typeof req.headers.range === 'string' ? req.headers.range : undefined;
 }
 
+function requestRange(req: VercelRequest): string | undefined {
+  return typeof req.headers.range === 'string' ? req.headers.range : undefined;
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
     res.status(204).end();

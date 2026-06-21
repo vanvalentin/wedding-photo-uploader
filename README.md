@@ -293,8 +293,31 @@ npm run migrate-drive-to-r2
 The migration is safe to rerun:
 
 - Rows already marked `storage_provider = 'r2'` are not selected.
-- If an R2 object already exists at the deterministic migrated key, the upload is skipped and Supabase is updated.
+- If an R2 object already exists at the target key, the upload is skipped and Supabase is updated.
 - Google Drive files are not deleted.
+
+All R2 uploads use a flat key layout: `uploads/<uuid>-<filename>` (no date or per-file subfolders).
+
+### Flatten existing nested R2 keys
+
+If you migrated before the flat layout, nested keys (for example `uploads/2025/06/19/...` or `migrated/google-drive/<id>/...`) can be moved into the flat `uploads/` folder:
+
+```bash
+# Preview the first few rows without copying or updating Supabase
+npm run flatten-r2-keys -- --dry-run --limit 5
+
+# Copy nested objects to flat keys, update Supabase, and delete old objects
+npm run flatten-r2-keys
+
+# Keep old R2 objects until you verify the new keys work
+npm run flatten-r2-keys -- --keep-old
+```
+
+The flatten script is safe to rerun:
+
+- Rows already using flat keys (`uploads/<uuid>-<filename>`) are skipped.
+- `media_uploads` and `curated_gallery` `storage_key` values are updated together.
+- By default, old nested objects are deleted after a successful copy.
 
 ### Admin UI (`/admin`)
 
