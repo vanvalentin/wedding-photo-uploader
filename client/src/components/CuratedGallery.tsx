@@ -4,6 +4,7 @@ import { useI18n } from '../i18n/I18nContext';
 import { useCuratedGallery } from '../hooks/useCuratedGallery';
 import { pickRandomItems } from '../utils/shuffleArray';
 import { HighlightsCarousel, HIGHLIGHTS_CAROUSEL_SIZE } from './HighlightsCarousel';
+import { HighlightsCarouselSkeleton } from './HighlightsCarouselSkeleton';
 
 export function CuratedGallery() {
   const { t } = useI18n();
@@ -23,9 +24,9 @@ export function CuratedGallery() {
 
   if (loading) {
     return (
-      <section className="curated-gallery" aria-busy="true">
+      <section className="curated-gallery" aria-busy="true" aria-label={t.curatedGalleryLoading}>
         <h2 className="curated-gallery-title">{t.curatedGalleryTitle}</h2>
-        <p className="curated-gallery-loading">{t.curatedGalleryLoading}</p>
+        <HighlightsCarouselSkeleton />
       </section>
     );
   }
