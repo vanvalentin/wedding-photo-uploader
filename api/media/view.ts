@@ -1,6 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { parseMediaIdentifier, proxyMedia } from '../../lib/mediaProxy.js';
 
+function requestRange(req: VercelRequest): string | undefined {
+  return typeof req.headers.range === 'string' ? req.headers.range : undefined;
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
     res.status(204).end();
@@ -22,7 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const download = req.query.download === '1' || req.query.download === 'true';
 
   try {
-    await proxyMedia(identifier, res, { download });
+    await proxyMedia(identifier, res, { download, range: requestRange(req) });
   } catch (error) {
     console.error('Media view proxy error:', error);
     if (!res.headersSent) {

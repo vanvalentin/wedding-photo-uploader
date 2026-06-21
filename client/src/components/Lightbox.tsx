@@ -2,7 +2,12 @@ import { useEffect, useCallback, useRef, useState, type TouchEvent } from 'react
 import type { MediaPreview } from '../types';
 import { useI18n } from '../i18n/I18nContext';
 import { fetchBlobWithProgress } from '../utils/fetchWithProgress';
-import { resolveDownloadUrl, resolveMediumPreviewUrl, resolveViewUrl } from '../utils/mediaUrls';
+import {
+  isSameOriginMediaApiUrl,
+  resolveDownloadUrl,
+  resolveMediumPreviewUrl,
+  resolveViewUrl,
+} from '../utils/mediaUrls';
 
 interface LightboxProps {
   items: MediaPreview[];
@@ -98,9 +103,9 @@ export function Lightbox({ items, activeIndex, onActiveIndexChange }: LightboxPr
     if (!item || item.isVideo) return;
 
     const viewUrl = resolveViewUrl(item);
-    const isDriveImage = !viewUrl.startsWith('blob:');
+    const shouldFetchWithProgress = isSameOriginMediaApiUrl(viewUrl);
 
-    if (!isDriveImage) {
+    if (!shouldFetchWithProgress) {
       setFullImageUrl(viewUrl);
       setFullReady(true);
       return;
@@ -141,7 +146,7 @@ export function Lightbox({ items, activeIndex, onActiveIndexChange }: LightboxPr
 
   const viewUrl = resolveViewUrl(item);
   const downloadUrl = resolveDownloadUrl(item);
-  const isDriveImage = !item.isVideo && !viewUrl.startsWith('blob:');
+  const shouldFetchWithProgress = !item.isVideo && isSameOriginMediaApiUrl(viewUrl);
   const mediumPreviewUrl = resolveMediumPreviewUrl(item);
   const visibleSrc =
     fullReady && fullImageUrl
@@ -149,7 +154,7 @@ export function Lightbox({ items, activeIndex, onActiveIndexChange }: LightboxPr
       : mediumPreviewReady && mediumPreviewUrl
         ? mediumPreviewUrl
         : item.previewUrl;
-  const showFullLoadStatus = isDriveImage && !fullReady;
+  const showFullLoadStatus = shouldFetchWithProgress && !fullReady;
 
   const handleTouchStart = (event: TouchEvent) => {
     touchStartX.current = event.changedTouches[0]?.clientX ?? null;
@@ -234,7 +239,7 @@ export function Lightbox({ items, activeIndex, onActiveIndexChange }: LightboxPr
           />
         ) : (
           <div className="lightbox-image-wrap" onClick={(e) => e.stopPropagation()}>
-            {isDriveImage && mediumPreviewUrl && !mediumPreviewReady && (
+            {shouldFetchWithProgress && mediumPreviewUrl && !mediumPreviewReady && (
               <img
                 src={mediumPreviewUrl}
                 alt=""

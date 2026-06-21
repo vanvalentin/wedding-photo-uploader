@@ -94,17 +94,21 @@ export async function fetchMediaPreview(identifier: MediaIdentifier): Promise<Re
 export async function proxyMedia(
   identifier: MediaIdentifier,
   res: ServerResponse,
-  options: { download?: boolean } = {}
+  options: { download?: boolean; range?: string } = {}
 ): Promise<void> {
   if (identifier.provider === 'r2') {
-    const object = await fetchR2Object(identifier.key);
+    const object = await fetchR2Object(identifier.key, { range: options.range });
     const filename = safeFilename(object.metadata.fileName);
     const disposition = options.download ? 'attachment' : 'inline';
 
-    res.statusCode = 200;
+    res.statusCode = object.contentRange ? 206 : 200;
     res.setHeader('Content-Type', object.metadata.contentType);
     res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
     res.setHeader('Content-Disposition', `${disposition}; filename="${filename}"`);
+    res.setHeader('Accept-Ranges', object.acceptRanges ?? 'bytes');
+    if (object.contentRange) {
+      res.setHeader('Content-Range', object.contentRange);
+    }
     res.setHeader('Content-Length', String(object.buffer.length));
     res.end(object.buffer);
     return;
@@ -112,7 +116,7 @@ export async function proxyMedia(
 
   const [metadata, mediaResponse] = await Promise.all([
     getDriveFileMetadata(identifier.key),
-    fetchDriveMedia(identifier.key),
+    fetchDriveMedia(identifier.key, options.range),
   ]);
 
   if (!mediaResponse.ok) {
@@ -125,12 +129,19 @@ export async function proxyMedia(
   const buffer = Buffer.from(await mediaResponse.arrayBuffer());
   const filename = safeFilename(metadata.name);
   const disposition = options.download ? 'attachment' : 'inline';
+  const contentRange = mediaResponse.headers.get('Content-Range');
+  const acceptRanges = mediaResponse.headers.get('Accept-Ranges');
+  const contentLength = mediaResponse.headers.get('Content-Length');
 
-  res.statusCode = 200;
+  res.statusCode = mediaResponse.status === 206 ? 206 : 200;
   res.setHeader('Content-Type', contentType);
   res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
   res.setHeader('Content-Disposition', `${disposition}; filename="${filename}"`);
-  res.setHeader('Content-Length', String(buffer.length));
+  res.setHeader('Accept-Ranges', acceptRanges ?? 'bytes');
+  if (contentRange) {
+    res.setHeader('Content-Range', contentRange);
+  }
+  res.setHeader('Content-Length', contentLength ?? String(buffer.length));
   res.end(buffer);
 }
 

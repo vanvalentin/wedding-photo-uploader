@@ -24,11 +24,21 @@ export function resolveMediumPreviewUrl(item: MediaPreview): string | null {
   return null;
 }
 
+export function isSameOriginMediaApiUrl(url: string): boolean {
+  if (url.startsWith('blob:')) return false;
+  const parsed = new URL(url, window.location.origin);
+  return parsed.origin === window.location.origin && parsed.pathname.startsWith('/api/media/');
+}
+
 export function resolveDownloadUrl(item: MediaPreview): string {
   const viewUrl = resolveViewUrl(item);
   if (viewUrl.startsWith('blob:')) return viewUrl;
 
   const url = new URL(viewUrl, window.location.origin);
+  if (url.origin !== window.location.origin) {
+    return url.href;
+  }
+
   url.searchParams.set('download', '1');
   return url.pathname + url.search;
 }
