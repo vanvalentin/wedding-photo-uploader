@@ -233,8 +233,12 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
   };
 
   const handleDeleteUpload = async (item: AdminMediaUploadItem) => {
+    const storageTargets =
+      item.storageProvider === 'r2'
+        ? 'Cloudflare R2 and Google Drive (if mirrored)'
+        : 'Google Drive and Cloudflare R2 (if copied)';
     const confirmed = window.confirm(
-      `Delete "${item.fileName}" from Google Drive and remove it from the gallery?\n\nThis moves the file to Drive trash and cannot be undone from here.`
+      `Delete "${item.fileName}" from ${storageTargets} and remove it from the gallery?\n\nThis permanently removes the file from storage and cannot be undone from here.`
     );
     if (!confirmed) return;
 
@@ -244,7 +248,7 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
 
     try {
       await deleteUpload(secret, item.id);
-      setActionMessage(`Deleted "${item.fileName}" from Drive`);
+      setActionMessage(`Deleted "${item.fileName}" from storage`);
       await refreshData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete upload');
@@ -443,7 +447,7 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
                       disabled={busyId === item.id}
                       onClick={() => handleDeleteUpload(item)}
                     >
-                      {busyId === item.id ? 'Deleting…' : 'Delete from Drive'}
+                      {busyId === item.id ? 'Deleting…' : 'Delete file'}
                     </button>
                   </div>
                 </div>

@@ -1,7 +1,7 @@
 import { getSupabaseAdmin, isSupabaseAdminConfigured } from './supabase.js';
 import { normalizeTimestamp } from './normalizeTimestamp.js';
 import { deleteDriveFile } from './googleDrive.js';
-import { deleteR2Object } from './r2Storage.js';
+import { deleteR2Object, isR2ObjectKey } from './r2Storage.js';
 
 export type StorageProvider = 'google_drive' | 'r2';
 
@@ -428,14 +428,21 @@ export async function deleteMediaUploadCompletely(id: string): Promise<void> {
     storageKey: row.storage_key,
   });
 
-  if (identity.storageProvider === 'r2') {
+  const hasDistinctDriveFileId =
+    row.drive_file_id !== row.storage_key && !isR2ObjectKey(row.drive_file_id);
+
+  if (identity.storageProvider === 'r2' || isR2ObjectKey(identity.storageKey)) {
     await deleteR2Object(identity.storageKey);
-  } else {
-    await deleteDriveFile(identity.driveFileId);
   }
 
   if (row.thumbnail_storage_provider === 'r2' && row.thumbnail_storage_key) {
     await deleteR2Object(row.thumbnail_storage_key);
+  }
+
+  if (identity.storageProvider === 'google_drive' && !isR2ObjectKey(identity.driveFileId)) {
+    await deleteDriveFile(identity.driveFileId);
+  } else if (hasDistinctDriveFileId) {
+    await deleteDriveFile(row.drive_file_id);
   }
 
   const curatedQuery = supabase
