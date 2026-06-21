@@ -24,9 +24,14 @@ export interface AdminPrivateAlbumItem {
 export interface AlbumUploadInitResponse {
   sessionUri: string;
   fileName: string;
-  storageProvider: 'google_drive' | 'r2';
-  storageKey?: string;
-  uploadMethod: 'single_put' | 'drive_resumable';
+  storageProvider: 'r2';
+  storageKey: string;
+  uploadMethod: 'single_put';
+  thumbnailUpload?: {
+    uploadUrl: string;
+    storageKey: string;
+    mimeType: string;
+  };
 }
 
 function adminHeaders(secret: string): HeadersInit {

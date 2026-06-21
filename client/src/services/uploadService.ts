@@ -206,9 +206,16 @@ export interface RegisterUploadCompleteInput {
   thumbnailFileSize?: number;
 }
 
+export interface RegisterUploadCompleteResponse {
+  driveFileId: string;
+  storageProvider: 'google_drive' | 'r2';
+  storageKey: string;
+  alreadyRegistered: boolean;
+}
+
 export async function registerUploadComplete(
   input: RegisterUploadCompleteInput
-): Promise<void> {
+): Promise<RegisterUploadCompleteResponse> {
   const response = await fetch(`${API_BASE}/api/upload/complete`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -219,4 +226,6 @@ export async function registerUploadComplete(
     const body = await response.json().catch(() => ({}));
     throw new Error(body.message ?? body.error ?? `Registration failed (${response.status})`);
   }
+
+  return response.json();
 }
