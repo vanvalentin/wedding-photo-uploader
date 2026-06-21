@@ -2,24 +2,44 @@
 -- Google Drive rows can continue to use Drive's native thumbnail endpoint.
 
 alter table public.media_uploads
-  add column thumbnail_storage_provider text,
-  add column thumbnail_storage_key text,
-  add column thumbnail_mime_type text,
-  add column thumbnail_file_size bigint;
+  add column if not exists thumbnail_storage_provider text,
+  add column if not exists thumbnail_storage_key text,
+  add column if not exists thumbnail_mime_type text,
+  add column if not exists thumbnail_file_size bigint;
 
-alter table public.media_uploads
-  add constraint media_uploads_thumbnail_storage_provider_check
-    check (
-      thumbnail_storage_provider is null
-      or thumbnail_storage_provider in ('google_drive', 'r2')
-    ),
-  add constraint media_uploads_thumbnail_storage_pair_check
-    check (
-      (thumbnail_storage_provider is null and thumbnail_storage_key is null)
-      or (thumbnail_storage_provider is not null and thumbnail_storage_key is not null)
-    );
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'media_uploads_thumbnail_storage_provider_check'
+      and conrelid = 'public.media_uploads'::regclass
+  ) then
+    alter table public.media_uploads
+      add constraint media_uploads_thumbnail_storage_provider_check
+        check (
+          thumbnail_storage_provider is null
+          or thumbnail_storage_provider in ('google_drive', 'r2')
+        );
+  end if;
 
-create index media_uploads_thumbnail_storage_idx
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'media_uploads_thumbnail_storage_pair_check'
+      and conrelid = 'public.media_uploads'::regclass
+  ) then
+    alter table public.media_uploads
+      add constraint media_uploads_thumbnail_storage_pair_check
+        check (
+          (thumbnail_storage_provider is null and thumbnail_storage_key is null)
+          or (thumbnail_storage_provider is not null and thumbnail_storage_key is not null)
+        );
+  end if;
+end
+$$;
+
+create index if not exists media_uploads_thumbnail_storage_idx
   on public.media_uploads (thumbnail_storage_provider, thumbnail_storage_key)
   where thumbnail_storage_key is not null;
 
