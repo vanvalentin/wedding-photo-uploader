@@ -20,11 +20,13 @@ import { AdminBulkDateBar } from './AdminBulkDateBar';
 import { AdminAlbumsPanel } from './AdminAlbumsPanel';
 import {
   filterByReviewStatus,
+  filterByUploader,
   formatMediaDateLabel,
   sortByMediaDate,
   type AdminReviewFilter,
   type AdminSortDirection,
   type AdminSortField,
+  type AdminUploaderFilter,
 } from '../../utils/formatDateTime';
 
 interface AdminDashboardProps {
@@ -48,6 +50,7 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
   const [sortField, setSortField] = useState<AdminSortField>('taken');
   const [sortDirection, setSortDirection] = useState<AdminSortDirection>('desc');
   const [reviewFilter, setReviewFilter] = useState<AdminReviewFilter>('unreviewed');
+  const [uploaderFilter, setUploaderFilter] = useState<AdminUploaderFilter>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
   const loadData = useCallback(async (options?: { background?: boolean }) => {
@@ -89,9 +92,22 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
     [uploads, sortField, sortDirection]
   );
 
+  const uploaderOptions = useMemo(() => {
+    const names = new Set<string>();
+    for (const upload of uploads) {
+      const name = upload.guestName?.trim();
+      if (name) names.add(name);
+    }
+    return [...names].sort((a, b) => a.localeCompare(b));
+  }, [uploads]);
+
   const filteredUploads = useMemo(
-    () => filterByReviewStatus(sortedUploads, reviewFilter),
-    [sortedUploads, reviewFilter]
+    () =>
+      filterByUploader(
+        filterByReviewStatus(sortedUploads, reviewFilter),
+        uploaderFilter
+      ),
+    [sortedUploads, reviewFilter, uploaderFilter]
   );
 
   const unreviewedCount = useMemo(
@@ -134,7 +150,7 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
   useEffect(() => {
     setPreviewIndex(null);
     setSelectedIds(new Set());
-  }, [tab, reviewFilter]);
+  }, [tab, reviewFilter, uploaderFilter]);
 
   const handleLogout = () => {
     clearAdminSecret();
@@ -350,6 +366,10 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
           showReviewFilter={tab === 'uploads'}
           reviewFilter={reviewFilter}
           onReviewFilterChange={setReviewFilter}
+          showUploaderFilter={tab === 'uploads'}
+          uploaderFilter={uploaderFilter}
+          onUploaderFilterChange={setUploaderFilter}
+          uploaderOptions={uploaderOptions}
         />
       )}
 
@@ -374,11 +394,15 @@ export function AdminDashboard({ secret, onLogout }: AdminDashboardProps) {
           <div className="admin-grid">
           {filteredUploads.length === 0 ? (
             <p className="admin-empty">
-              {reviewFilter === 'unreviewed'
-                ? 'All uploads have been reviewed.'
-                : reviewFilter === 'reviewed'
-                  ? 'No reviewed uploads yet.'
-                  : 'No uploads registered yet. Use Import from Drive for existing folder photos, or wait for new guest uploads.'}
+              {uploaderFilter !== 'all'
+                ? uploaderFilter === '__none__'
+                  ? 'No uploads without a guest name match the current filters.'
+                  : `No uploads from "${uploaderFilter}" match the current filters.`
+                : reviewFilter === 'unreviewed'
+                  ? 'All uploads have been reviewed.'
+                  : reviewFilter === 'reviewed'
+                    ? 'No reviewed uploads yet.'
+                    : 'No uploads registered yet. Use Import from Drive for existing folder photos, or wait for new guest uploads.'}
             </p>
           ) : (
             filteredUploads.map((item) => (

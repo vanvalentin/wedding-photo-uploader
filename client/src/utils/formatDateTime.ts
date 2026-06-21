@@ -51,6 +51,7 @@ export function toParisDateTimeLocalInput(value: string | null | undefined): str
 export type AdminSortField = 'taken' | 'uploaded';
 export type AdminSortDirection = 'desc' | 'asc';
 export type AdminReviewFilter = 'all' | 'unreviewed' | 'reviewed';
+export type AdminUploaderFilter = 'all' | '__none__' | string;
 
 export function filterByReviewStatus<T extends { reviewed: boolean }>(
   items: T[],
@@ -59,6 +60,15 @@ export function filterByReviewStatus<T extends { reviewed: boolean }>(
   if (filter === 'reviewed') return items.filter((item) => item.reviewed);
   if (filter === 'unreviewed') return items.filter((item) => !item.reviewed);
   return items;
+}
+
+export function filterByUploader<T extends { guestName: string | null }>(
+  items: T[],
+  filter: AdminUploaderFilter
+): T[] {
+  if (filter === 'all') return items;
+  if (filter === '__none__') return items.filter((item) => !item.guestName?.trim());
+  return items.filter((item) => item.guestName === filter);
 }
 
 export function sortByMediaDate<T extends { takenAt: string | null }>(

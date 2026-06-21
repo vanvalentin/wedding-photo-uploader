@@ -1,4 +1,9 @@
-import type { AdminReviewFilter, AdminSortDirection, AdminSortField } from '../../utils/formatDateTime';
+import type {
+  AdminReviewFilter,
+  AdminSortDirection,
+  AdminSortField,
+  AdminUploaderFilter,
+} from '../../utils/formatDateTime';
 
 interface AdminSortBarProps {
   sortField: AdminSortField;
@@ -9,6 +14,10 @@ interface AdminSortBarProps {
   reviewFilter?: AdminReviewFilter;
   onReviewFilterChange?: (filter: AdminReviewFilter) => void;
   showReviewFilter?: boolean;
+  uploaderFilter?: AdminUploaderFilter;
+  onUploaderFilterChange?: (filter: AdminUploaderFilter) => void;
+  uploaderOptions?: string[];
+  showUploaderFilter?: boolean;
 }
 
 export function AdminSortBar({
@@ -20,6 +29,10 @@ export function AdminSortBar({
   reviewFilter = 'all',
   onReviewFilterChange,
   showReviewFilter = false,
+  uploaderFilter = 'all',
+  onUploaderFilterChange,
+  uploaderOptions = [],
+  showUploaderFilter = false,
 }: AdminSortBarProps) {
   return (
     <div className="admin-sort-bar">
@@ -56,6 +69,24 @@ export function AdminSortBar({
             <option value="all">All</option>
             <option value="unreviewed">To review</option>
             <option value="reviewed">Reviewed</option>
+          </select>
+        </label>
+      )}
+      {showUploaderFilter && onUploaderFilterChange && (
+        <label className="admin-sort-label">
+          Uploader
+          <select
+            className="admin-sort-select"
+            value={uploaderFilter}
+            onChange={(event) => onUploaderFilterChange(event.target.value as AdminUploaderFilter)}
+          >
+            <option value="all">All</option>
+            <option value="__none__">No name</option>
+            {uploaderOptions.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
           </select>
         </label>
       )}
